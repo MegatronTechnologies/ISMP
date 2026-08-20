@@ -9,7 +9,7 @@ const Profile = () => {
   const { t } = useTranslation();
   const { user } = useSelector(state => state.auth);
 
-  if (!user) return <Layout><div className="container"><p>Please log in.</p></div></Layout>;
+  if (!user) return <Layout><div className="container"><p>{t('Please log in.')}</p></div></Layout>;
 
   return (
     <Layout>
@@ -26,35 +26,35 @@ const Profile = () => {
               </div>
               <div className="info">
                 <h3>{user.name}</h3>
-                <span className={`role-badge \${user.role.toLowerCase()}`}>{user.role}</span>
+                <span className={`role-badge ${user.role.toLowerCase()}`}>{t(user.role)}</span>
                 <p className="org-text"><Building size={16}/> {user.organization}</p>
               </div>
             </div>
 
             <div className="settings-grid">
               <div className="settings-card">
-                <h4><Key size={18}/> Security</h4>
+                <h4><Key size={18}/> {t('Security')}</h4>
                 <div className="setting-item">
-                  <span>Change Password</span>
-                  <button className="btn btn-outline btn-sm">Update</button>
+                  <span>{t('Change Password')}</span>
+                  <button className="btn btn-outline btn-sm">{t('Update')}</button>
                 </div>
                 <div className="setting-item">
-                  <span>Two-Factor Auth</span>
-                  <button className="btn btn-outline btn-sm">Enable</button>
+                  <span>{t('Two-Factor Auth')}</span>
+                  <button className="btn btn-outline btn-sm">{t('Enable')}</button>
                 </div>
               </div>
 
               <div className="settings-card">
-                <h4><Bell size={18}/> Notifications</h4>
+                <h4><Bell size={18}/> {t('Notifications')}</h4>
                 <div className="setting-item">
-                  <span>Email Alerts</span>
+                  <span>{t('Email Alerts')}</span>
                   <label className="switch">
                     <input type="checkbox" defaultChecked />
                     <span className="slider"></span>
                   </label>
                 </div>
                 <div className="setting-item">
-                  <span>SMS Alerts</span>
+                  <span>{t('SMS Alerts')}</span>
                   <label className="switch">
                     <input type="checkbox" />
                     <span className="slider"></span>
@@ -63,9 +63,9 @@ const Profile = () => {
               </div>
 
               <div className="settings-card">
-                <h4><Camera size={18}/> Preferences</h4>
+                <h4><Camera size={18}/> {t('Preferences')}</h4>
                 <div className="setting-item">
-                  <span>Default Camera Grid</span>
+                  <span>{t('Default Camera Grid')}</span>
                   <select className="input">
                     <option>2x2</option>
                     <option>3x3</option>

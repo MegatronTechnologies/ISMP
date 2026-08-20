@@ -21,24 +21,24 @@ const Register = () => {
           <div className="auth-header">
             <Shield size={48} className="auth-icon" />
             <h2>{t('Get Started')}</h2>
-            <p>Request an account for your organization</p>
+            <p>{t('Request an account for your organization')}</p>
           </div>
           
           <form className="auth-form" onSubmit={handleRegister}>
             <div className="form-group">
-              <label>Full Name</label>
-              <input type="text" placeholder="John Doe" required />
+              <label>{t('Full Name')}</label>
+              <input type="text" placeholder={t('John Doe')} required />
             </div>
             
             <div className="form-group">
-              <label>Email Address</label>
+              <label>{t('Email Address')}</label>
               <input type="email" placeholder="name@organization.com" required />
             </div>
             
             <div className="form-group">
-              <label>Organization</label>
+              <label>{t('Organization')}</label>
               <select required defaultValue="">
-                <option value="" disabled>Select your organization</option>
+                <option value="" disabled>{t('Select your organization')}</option>
                 <option value="1">Holberton School</option>
                 <option value="2">Ministry of Education</option>
                 <option value="3">Central Station</option>
@@ -46,20 +46,20 @@ const Register = () => {
             </div>
             
             <div className="form-group">
-              <label>Password</label>
+              <label>{t('Password')}</label>
               <input type="password" placeholder="••••••••" required />
             </div>
             
             <div className="form-group">
-              <label>Confirm Password</label>
+              <label>{t('Confirm Password')}</label>
               <input type="password" placeholder="••••••••" required />
             </div>
             
-            <button type="submit" className="btn btn-primary w-100">Request Account</button>
+            <button type="submit" className="btn btn-primary w-100">{t('Request Account')}</button>
           </form>
           
           <div className="auth-footer">
-            Already have an account? <Link to="/login">{t('Login')}</Link>
+            {t('Already have an account?')} <Link to="/login">{t('Login')}</Link>
           </div>
         </div>
       </div>

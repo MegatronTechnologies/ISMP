@@ -4,13 +4,15 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { Bell, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { markAllAsRead, markAsRead } from '../redux/slices/notificationSlice';
+import { getLocale } from '../utils/dateHelper';
 import Layout from '../components/Layout';
 import './Notifications.scss';
 
 const Notifications = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const { notifications } = useSelector(state => state.notifications);
+  const locale = getLocale(i18n.language);
 
   return (
     <Layout>
@@ -32,11 +34,11 @@ const Notifications = () => {
                 <div className="content">
                   <h4>
                     {note.incidentId ? (
-                       <Link to={`/incidents/${note.incidentId}`}>{t(note.title)}</Link>
-                    ) : t(note.title)}
+                       <Link to={`/incidents/${note.incidentId}`}>{t(note.title, note.payload)}</Link>
+                    ) : t(note.title, note.payload)}
                   </h4>
-                  <p>{t(note.desc)}</p>
-                  <span className="time">{new Date(note.time).toLocaleString()}</span>
+                  <p>{t(note.desc, note.payload)}</p>
+                  <span className="time">{new Date(note.time).toLocaleString(locale)}</span>
                 </div>
                 {!note.read && <div className="unread-dot" style={{width: '8px', height: '8px', backgroundColor: 'var(--red-holberton)', borderRadius: '50%', alignSelf: 'center'}}></div>}
               </div>

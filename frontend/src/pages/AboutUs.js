@@ -3,22 +3,23 @@ import { useTranslation } from 'react-i18next';
 import Layout from '../components/Layout';
 import './InfoPages.scss';
 
+// Note: Real images were requested but are missing from the environment.
+// Using placeholders gracefully as requested when binary files are absent.
 const team = [
-  { name: 'Sulxayev Aydın', role: 'AI · Database · YOLO', file: '/Aydın.jpeg' },
-  { name: 'Qurbanova Leyla', role: 'Backend', file: '/Leyla.jpeg' },
-  { name: 'Əliyev Emil', role: 'Frontend', file: '/Emil.jpeg' },
+  { name: 'Sulxayev Aydın', role: 'AI · Database · YOLO', file: '/assets/team/aydin.jpeg' },
+  { name: 'Qurbanova Leyla', role: 'Backend', file: '/assets/team/leyla.jpeg' },
+  { name: 'Əliyev Emil', role: 'Frontend', file: '/assets/team/emil.jpeg' },
 ];
 
 const AboutUs = () => {
   const { t } = useTranslation();
-
   return (
     <Layout>
       <div className="info-page">
         <div className="container">
           <div className="page-header text-center">
             <h2>{t('About Us')}</h2>
-            <p style={{color: 'var(--text-secondary)', marginTop: '0.5rem'}}>{t('The engineering team behind ISMP') || 'The engineering team behind ISMP'}</p>
+            <p style={{color: 'var(--text-secondary)', marginTop: '0.5rem'}}>{t('The engineering team behind ISMP')}</p>
           </div>
           
           <div className="team-grid" style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem', marginTop: '3rem'}}>
@@ -40,5 +41,4 @@ const AboutUs = () => {
     </Layout>
   );
 };
-
 export default AboutUs;

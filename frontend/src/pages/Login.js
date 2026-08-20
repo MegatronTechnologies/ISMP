@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
+import { useNavigate, Link } from 'react-router-dom';
 import { Shield } from 'lucide-react';
 import { login } from '../redux/slices/authSlice';
 import Layout from '../components/Layout';
@@ -9,16 +9,14 @@ import './Auth.scss';
 
 const Login = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   const handleLogin = (e) => {
     e.preventDefault();
-    // Simulate API login
-    dispatch(login({
-      user: { name: 'Demo User', role: 'USER', organization: 'Holberton School' },
-      token: 'demo-jwt-token'
-    }));
+    dispatch(login({ email }));
     navigate('/dashboard');
   };
 
@@ -28,35 +26,41 @@ const Login = () => {
         <div className="auth-container">
           <div className="auth-header">
             <Shield size={48} className="auth-icon" />
-            <h2>{t('Login to ISMP')}</h2>
-            <p>Enter your credentials to access the platform</p>
+            <h2>{t('Welcome Back')}</h2>
+            <p>{t('Login to ISMP')}</p>
           </div>
           
           <form className="auth-form" onSubmit={handleLogin}>
             <div className="form-group">
-              <label>Email Address</label>
-              <input type="email" placeholder="name@organization.com" required />
+              <label>{t('Email Address')}</label>
+              <input 
+                type="email" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@ismp.az" 
+                required 
+              />
             </div>
             
             <div className="form-group">
               <div className="d-flex justify-between">
-                <label>Password</label>
-                <a href="#" className="forgot-link">Forgot Password?</a>
+                <label>{t('Password')}</label>
+                <a href="#" className="forgot-link">{t('Forgot Password?')}</a>
               </div>
-              <input type="password" placeholder="••••••••" required />
+              <input 
+                type="password" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••" 
+                required 
+              />
             </div>
             
-            <div className="form-group checkbox">
-              <label>
-                <input type="checkbox" /> Remember me
-              </label>
-            </div>
-            
-            <button type="submit" className="btn btn-primary w-100">{t('Login')}</button>
+            <button type="submit" className="btn btn-primary w-100">{t('Sign in')}</button>
           </form>
           
           <div className="auth-footer">
-            Don't have an account? <Link to="/register">{t('Get Started')}</Link>
+            {t("Don't have an account?")} <Link to="/register">{t('Get Started')}</Link>
           </div>
         </div>
       </div>

@@ -4,21 +4,29 @@ import { addNotification } from '../slices/notificationSlice';
 import { addAuditEvent } from '../slices/auditSlice';
 
 export const triggerThreatSimulation = () => (dispatch, getState) => {
-  const { auth } = getState();
+  const { auth, incidents } = getState();
   const actor = auth.user ? auth.user.name : 'System';
   const timestamp = new Date().toISOString();
   
   // 1. Simulate Threat
   dispatch(simulateThreat());
   
-  // 2. Create Incident
-  const incidentId = `INC-${Math.floor(1000 + Math.random() * 9000)}`;
+  // 2. Generate unique incident ID
+  let newId;
+  let isUnique = false;
+  while (!isUnique) {
+    newId = `INC-${Math.floor(1000 + Math.random() * 9000)}`;
+    isUnique = !incidents.incidents.find(i => i.id === newId);
+  }
+
+  const incidentId = newId;
+
   dispatch(addIncident({
     id: incidentId,
-    cameraId: "demo-camera",
-    cameraName: "Demo Camera",
+    cameraId: "cam-01",
+    cameraName: "Main Gate (Cam-01)",
     cameraScope: "GLOBAL",
-    detectionType: "Potential Weapon",
+    detectionType: "WEAPON",
     confidence: 0.94,
     status: "NEW",
     startedAt: timestamp,
@@ -33,11 +41,12 @@ export const triggerThreatSimulation = () => (dispatch, getState) => {
   dispatch(addNotification({
     id: Math.random().toString(36).substr(2, 9),
     type: 'critical',
-    title: 'Potential Weapon Detected',
+    title: 'SECURITY ALERT: Potential Weapon Detected',
     time: timestamp,
-    desc: 'Camera: Demo Camera. Confidence: 94%',
+    desc: 'Camera: Main Gate (Cam-01). Confidence: 94%',
     read: false,
-    incidentId: incidentId
+    incidentId: incidentId,
+    payload: { confidence: 94, camera: "Main Gate (Cam-01)" } // used for structured translations
   }));
   
   // 4. Audit Event
@@ -53,14 +62,20 @@ export const triggerThreatSimulation = () => (dispatch, getState) => {
 export const acknowledgeDemoIncident = (id) => (dispatch, getState) => {
   const { auth, incidents } = getState();
   const actor = auth.user ? auth.user.name : 'System';
+  const userRole = auth.user ? auth.user.role : 'USER';
+  
   const timestamp = new Date().toISOString();
   
   const incident = incidents.incidents.find(i => i.id === id);
   if (!incident) return;
   
+  // Rules check
+  if (incident.status !== 'NEW') return; // Only allow NEW -> ACKNOWLEDGED
+  if (!['USER', 'ORGANIZATION_ADMIN', 'SUPERADMIN'].includes(userRole)) return;
+  
   const startedAt = new Date(incident.startedAt).getTime();
   const responseTimeSecs = Math.floor((new Date().getTime() - startedAt) / 1000);
-  const responseTime = `${Math.floor(responseTimeSecs / 60)}m ${responseTimeSecs % 60}s`;
+  const responseTime = responseTimeSecs > 60 ? `${Math.floor(responseTimeSecs / 60)}m ${responseTimeSecs % 60}s` : `${responseTimeSecs}s`;
 
   dispatch(updateIncidentStatus({ id, status: 'ACKNOWLEDGED', timestamp, responseTime }));
   
@@ -74,9 +89,18 @@ export const acknowledgeDemoIncident = (id) => (dispatch, getState) => {
 };
 
 export const resolveDemoIncident = (id, status = 'RESOLVED') => (dispatch, getState) => {
-  const { auth } = getState();
+  const { auth, incidents } = getState();
   const actor = auth.user ? auth.user.name : 'System';
+  const userRole = auth.user ? auth.user.role : 'USER';
+  
   const timestamp = new Date().toISOString();
+  
+  const incident = incidents.incidents.find(i => i.id === id);
+  if (!incident) return;
+
+  // Rules check
+  if (incident.status !== 'ACKNOWLEDGED') return; // Only allow ACKNOWLEDGED -> RESOLVED/FALSE_POSITIVE
+  if (!['ORGANIZATION_ADMIN', 'SUPERADMIN'].includes(userRole)) return;
   
   dispatch(updateIncidentStatus({ id, status, timestamp }));
   
@@ -88,6 +112,5 @@ export const resolveDemoIncident = (id, status = 'RESOLVED') => (dispatch, getSt
     timestamp
   }));
   
-  // Also turn off simulation if we are resolving the demo one
   dispatch(resolveSimulation());
 };

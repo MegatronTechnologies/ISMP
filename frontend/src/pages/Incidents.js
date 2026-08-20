@@ -3,13 +3,15 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Filter, Search, Grid, List } from 'lucide-react';
+import { getLocale } from '../utils/dateHelper';
 import Layout from '../components/Layout';
 import './Incidents.scss';
 
 const Incidents = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [view, setView] = useState('table'); // 'table' | 'grid'
   const { incidents } = useSelector(state => state.incidents);
+  const locale = getLocale(i18n.language);
 
   return (
     <Layout>
@@ -67,10 +69,10 @@ const Incidents = () => {
                         </td>
                         <td>{inc.cameraName}</td>
                         <td><span className="badge threat">{t(inc.detectionType)}</span></td>
-                        <td>{new Date(inc.startedAt).toLocaleString()}</td>
+                        <td>{new Date(inc.startedAt).toLocaleString(locale)}</td>
                         <td className="mono">{(inc.confidence * 100).toFixed(0)}%</td>
                         <td>
-                          <span className={`status-badge ${inc.status.toLowerCase()}`}>{t(inc.status.replace('_', ' '))}</span>
+                          <span className={`status-badge ${inc.status.toLowerCase()}`}>{t(inc.status)}</span>
                         </td>
                         <td>{inc.responseTime || '-'}</td>
                         <td>
@@ -87,13 +89,13 @@ const Incidents = () => {
                   <div className="incident-card" key={inc.id}>
                     <div className="card-thumb">
                       <div className="status-overlay">
-                        <span className={`status-badge ${inc.status.toLowerCase()}`}>{t(inc.status.replace('_', ' '))}</span>
+                        <span className={`status-badge ${inc.status.toLowerCase()}`}>{t(inc.status)}</span>
                       </div>
                     </div>
                     <div className="card-body">
                       <div className="card-meta d-flex justify-between">
                         <span className="mono id">{inc.id}</span>
-                        <span className="time">{new Date(inc.startedAt).toLocaleTimeString()}</span>
+                        <span className="time">{new Date(inc.startedAt).toLocaleTimeString(locale)}</span>
                       </div>
                       <h4>{inc.cameraName}</h4>
                       <div className="card-footer d-flex justify-between align-center">

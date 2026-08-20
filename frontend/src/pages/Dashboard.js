@@ -4,34 +4,57 @@ import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Camera, ShieldAlert, CheckCircle, AlertTriangle } from 'lucide-react';
+import { getLocale } from '../utils/dateHelper';
 import Layout from '../components/Layout';
 import './Dashboard.scss';
-
-const mockDailyData = [
-  { name: 'Mon', incidents: 2 },
-  { name: 'Tue', incidents: 0 },
-  { name: 'Wed', incidents: 1 },
-  { name: 'Thu', incidents: 4 },
-  { name: 'Fri', incidents: 2 },
-  { name: 'Sat', incidents: 0 },
-  { name: 'Sun', incidents: 1 },
-];
 
 const COLORS = ['#2ecc71', '#95a5a6', '#f39c12', '#e74c3c'];
 
 const Dashboard = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { incidents } = useSelector(state => state.incidents);
   const { demoCameraStatus } = useSelector(state => state.simulation);
+  const locale = getLocale(i18n.language);
   
-  const newCount = incidents.filter(i => i.status === 'NEW').length;
-  const resolvedCount = incidents.filter(i => i.status === 'RESOLVED').length;
+  const now = new Date();
+  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+  const incidents24h = incidents.filter(i => new Date(i.startedAt) >= twentyFourHoursAgo);
+  const newCount = incidents24h.filter(i => i.status === 'NEW').length;
+  const resolvedCount = incidents24h.filter(i => i.status === 'RESOLVED').length;
+  
+  // Calculate average response time (from start to acknowledge)
+  let totalResponseMs = 0;
+  let respondedCount = 0;
+  incidents.forEach(inc => {
+    if (inc.acknowledgedAt) {
+      const start = new Date(inc.startedAt).getTime();
+      const ack = new Date(inc.acknowledgedAt).getTime();
+      if (ack >= start) {
+        totalResponseMs += (ack - start);
+        respondedCount++;
+      }
+    }
+  });
+
+  const avgResponseSecs = respondedCount > 0 ? Math.floor(totalResponseMs / respondedCount / 1000) : 0;
+  const avgResponseDisplay = avgResponseSecs > 60 ? `${Math.floor(avgResponseSecs/60)}m ${avgResponseSecs%60}s` : `${avgResponseSecs}s`;
   
   const statusData = [
-    { name: 'Resolved', value: incidents.filter(i => i.status === 'RESOLVED').length || 1 },
-    { name: 'False Positive', value: incidents.filter(i => i.status === 'FALSE_POSITIVE').length || 0 },
-    { name: 'Acknowledged', value: incidents.filter(i => i.status === 'ACKNOWLEDGED').length || 0 },
-    { name: 'New', value: incidents.filter(i => i.status === 'NEW').length || 0 },
+    { name: 'RESOLVED', value: incidents.filter(i => i.status === 'RESOLVED').length || 1 },
+    { name: 'FALSE_POSITIVE', value: incidents.filter(i => i.status === 'FALSE_POSITIVE').length || 0 },
+    { name: 'ACKNOWLEDGED', value: incidents.filter(i => i.status === 'ACKNOWLEDGED').length || 0 },
+    { name: 'NEW', value: incidents.filter(i => i.status === 'NEW').length || 0 },
+  ];
+
+  const mockDailyData = [
+    { name: t('Mon'), incidents: 2 },
+    { name: t('Tue'), incidents: 0 },
+    { name: t('Wed'), incidents: 1 },
+    { name: t('Thu'), incidents: 4 },
+    { name: t('Fri'), incidents: 2 },
+    { name: t('Sat'), incidents: 0 },
+    { name: t('Sun'), incidents: 1 },
   ];
 
   return (
@@ -74,7 +97,7 @@ const Dashboard = () => {
               <div className="stat-icon"><AlertTriangle size={24} /></div>
               <div className="stat-details">
                 <span className="stat-label">{t('Avg Response Time')}</span>
-                <span className="stat-value">14s</span>
+                <span className="stat-value">{avgResponseDisplay}</span>
               </div>
             </div>
           </div>
@@ -89,7 +112,7 @@ const Dashboard = () => {
                     <XAxis dataKey="name" stroke="#9e9e9e" />
                     <YAxis stroke="#9e9e9e" allowDecimals={false} />
                     <Tooltip cursor={{fill: '#1c1c1f'}} contentStyle={{backgroundColor: '#121214', border: '1px solid #2a2a2e'}} />
-                    <Bar dataKey="incidents" fill="#E03A3E" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="incidents" name={t('Incidents')} fill="#E03A3E" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -113,7 +136,7 @@ const Dashboard = () => {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip contentStyle={{backgroundColor: '#121214', border: '1px solid #2a2a2e'}} />
+                    <Tooltip formatter={(value, name) => [value, t(name)]} contentStyle={{backgroundColor: '#121214', border: '1px solid #2a2a2e'}} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -150,7 +173,7 @@ const Dashboard = () => {
                       <td>#{inc.id}</td>
                       <td>{inc.cameraName}</td>
                       <td><span className="badge threat">{t(inc.detectionType)}</span></td>
-                      <td>{new Date(inc.startedAt).toLocaleTimeString()}</td>
+                      <td>{new Date(inc.startedAt).toLocaleTimeString(locale)}</td>
                       <td><span className={`status-badge ${inc.status.toLowerCase()}`}>{t(inc.status)}</span></td>
                     </tr>
                   ))}

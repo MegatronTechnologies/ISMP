@@ -1,5 +1,6 @@
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { Shield, User, Settings, Video, AlertTriangle } from 'lucide-react';
 import { setDemoRole } from '../redux/slices/authSlice';
 import { setCameraStatus } from '../redux/slices/simulationSlice';
@@ -8,6 +9,7 @@ import './DemoControls.scss';
 
 const DemoControls = () => {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   const { user, isAuthenticated } = useSelector(state => state.auth);
   const { isThreatActive, demoCameraStatus } = useSelector(state => state.simulation);
   const { incidents } = useSelector(state => state.incidents);
@@ -25,16 +27,16 @@ const DemoControls = () => {
         <h4>Role Switcher</h4>
         <div className="btn-group">
           <button 
-            className={user?.role === 'USER' ? 'active' : ''} 
-            onClick={() => dispatch(setDemoRole('USER'))}
+             className={user?.role === 'USER' ? 'active' : ''} 
+             onClick={() => dispatch(setDemoRole('USER'))}
           >User</button>
           <button 
-            className={user?.role === 'ORGANIZATION_ADMIN' ? 'active' : ''} 
-            onClick={() => dispatch(setDemoRole('ORGANIZATION_ADMIN'))}
+             className={user?.role === 'ORGANIZATION_ADMIN' ? 'active' : ''} 
+             onClick={() => dispatch(setDemoRole('ORGANIZATION_ADMIN'))}
           >Org Admin</button>
           <button 
-            className={user?.role === 'SUPERADMIN' ? 'active' : ''} 
-            onClick={() => dispatch(setDemoRole('SUPERADMIN'))}
+             className={user?.role === 'SUPERADMIN' ? 'active' : ''} 
+             onClick={() => dispatch(setDemoRole('SUPERADMIN'))}
           >Super Admin</button>
         </div>
       </div>
@@ -43,12 +45,12 @@ const DemoControls = () => {
         <h4>Camera State</h4>
         <div className="btn-group">
           <button 
-            className={demoCameraStatus === 'ONLINE' ? 'active' : ''} 
-            onClick={() => dispatch(setCameraStatus('ONLINE'))}
+             className={demoCameraStatus === 'ONLINE' ? 'active' : ''} 
+             onClick={() => dispatch(setCameraStatus('ONLINE'))}
           >Online</button>
           <button 
-            className={demoCameraStatus === 'OFFLINE' ? 'active' : ''} 
-            onClick={() => dispatch(setCameraStatus('OFFLINE'))}
+             className={demoCameraStatus === 'OFFLINE' ? 'active' : ''} 
+             onClick={() => dispatch(setCameraStatus('OFFLINE'))}
           >Offline</button>
         </div>
       </div>
@@ -60,14 +62,16 @@ const DemoControls = () => {
             Simulate Threat
           </button>
         ) : (
-          <button className="btn btn-outline w-100" onClick={() => {
-            const activeIncident = incidents.find(i => i.status !== 'RESOLVED' && i.status !== 'FALSE_POSITIVE');
-            if (activeIncident) {
-               dispatch(resolveDemoIncident(activeIncident.id, 'RESOLVED'));
-            } else {
-               dispatch(resolveDemoIncident(null, 'RESOLVED')); // fallback
-            }
-          }}>
+          <button 
+            className="btn btn-outline w-100" 
+            onClick={() => {
+              const activeIncident = incidents.find(i => i.status !== 'RESOLVED' && i.status !== 'FALSE_POSITIVE');
+              if (activeIncident) {
+                // Must be Org Admin or SuperAdmin to resolve via demo controls, or we just rely on Thunk to reject
+                 dispatch(resolveDemoIncident(activeIncident.id, 'RESOLVED'));
+              }
+            }}
+          >
             Resolve Threat
           </button>
         )}

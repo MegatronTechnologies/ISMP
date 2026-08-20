@@ -4,16 +4,18 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { Camera, MapPin, Activity, ShieldAlert, ArrowLeft } from 'lucide-react';
 import { acknowledgeDemoIncident, resolveDemoIncident } from '../redux/actions/demoActions';
+import { getLocale } from '../utils/dateHelper';
 import Layout from '../components/Layout';
 import './Incidents.scss';
 
 const IncidentDetails = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { id } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { incidents } = useSelector(state => state.incidents);
   const { user } = useSelector(state => state.auth);
+  const locale = getLocale(i18n.language);
 
   const incident = incidents.find(i => i.id === id);
 
@@ -39,7 +41,7 @@ const IncidentDetails = () => {
             <Link to="/incidents" className="back-link"><ArrowLeft size={18} /> {t('Back to Incidents')}</Link>
             <div className="d-flex justify-between align-center" style={{marginTop: '1rem'}}>
               <h2>{t('Incident')} {incident.id}</h2>
-              <span className={`status-badge ${incident.status.toLowerCase()}`}>{t(incident.status.replace('_', ' '))}</span>
+              <span className={`status-badge ${incident.status.toLowerCase()}`}>{t(incident.status)}</span>
             </div>
           </div>
 
@@ -81,12 +83,12 @@ const IncidentDetails = () => {
                 </div>
                 <div className="meta-row">
                   <span className="label">{t('Start Time')}</span>
-                  <span className="value">{new Date(incident.startedAt).toLocaleString()}</span>
+                  <span className="value">{new Date(incident.startedAt).toLocaleString(locale)}</span>
                 </div>
                 {(incident.status === 'RESOLVED' || incident.status === 'FALSE_POSITIVE') && incident.resolvedAt && (
                   <div className="meta-row">
                     <span className="label">{t('End Time')}</span>
-                    <span className="value">{new Date(incident.resolvedAt).toLocaleString()}</span>
+                    <span className="value">{new Date(incident.resolvedAt).toLocaleString(locale)}</span>
                   </div>
                 )}
                 {incident.responseTime && (
@@ -116,18 +118,18 @@ const IncidentDetails = () => {
                 )}
                 <div className="workflow-history mt-3">
                   <p className="history-item">
-                    <span className="time">{new Date(incident.startedAt).toLocaleTimeString()}</span>
+                    <span className="time">{new Date(incident.startedAt).toLocaleTimeString(locale)}</span>
                     <span>{t('System created incident')}</span>
                   </p>
                   {incident.acknowledgedAt && (
                      <p className="history-item">
-                       <span className="time">{new Date(incident.acknowledgedAt).toLocaleTimeString()}</span>
+                       <span className="time">{new Date(incident.acknowledgedAt).toLocaleTimeString(locale)}</span>
                        <span>{t('Incident acknowledged')}</span>
                      </p>
                   )}
                   {incident.resolvedAt && (
                      <p className="history-item">
-                       <span className="time">{new Date(incident.resolvedAt).toLocaleTimeString()}</span>
+                       <span className="time">{new Date(incident.resolvedAt).toLocaleTimeString(locale)}</span>
                        <span>{t('Incident closed as')} {t(incident.status)}</span>
                      </p>
                   )}
