@@ -1,10 +1,10 @@
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { Shield, User, Settings, Video, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { setDemoRole } from '../redux/slices/authSlice';
 import { setCameraStatus } from '../redux/slices/simulationSlice';
-import { triggerThreatSimulation, resolveDemoIncident } from '../redux/actions/demoActions';
+import { triggerThreatSimulation, acknowledgeDemoIncident, resolveDemoIncident } from '../redux/actions/demoActions';
 import './DemoControls.scss';
 
 const DemoControls = () => {
@@ -16,64 +16,76 @@ const DemoControls = () => {
 
   if (!isAuthenticated) return null;
 
+  const activeIncident = incidents.find(i => i.status !== 'RESOLVED' && i.status !== 'FALSE_POSITIVE');
+  const canResolve = user?.role === 'ORGANIZATION_ADMIN' || user?.role === 'SUPERADMIN';
+
   return (
     <div className="demo-controls-global">
       <div className="demo-header">
         <AlertTriangle size={16} />
-        <span>DEMO CONTROLS</span>
+        <span>{t('DEMO CONTROLS')}</span>
       </div>
       
       <div className="demo-section">
-        <h4>Role Switcher</h4>
+        <h4>{t('Role Switcher')}</h4>
         <div className="btn-group">
           <button 
              className={user?.role === 'USER' ? 'active' : ''} 
              onClick={() => dispatch(setDemoRole('USER'))}
-          >User</button>
+          >{t('User')}</button>
           <button 
              className={user?.role === 'ORGANIZATION_ADMIN' ? 'active' : ''} 
              onClick={() => dispatch(setDemoRole('ORGANIZATION_ADMIN'))}
-          >Org Admin</button>
+          >{t('Org Admin')}</button>
           <button 
              className={user?.role === 'SUPERADMIN' ? 'active' : ''} 
              onClick={() => dispatch(setDemoRole('SUPERADMIN'))}
-          >Super Admin</button>
+          >{t('Super Admin')}</button>
         </div>
       </div>
 
       <div className="demo-section">
-        <h4>Camera State</h4>
+        <h4>{t('Camera State')}</h4>
         <div className="btn-group">
           <button 
              className={demoCameraStatus === 'ONLINE' ? 'active' : ''} 
              onClick={() => dispatch(setCameraStatus('ONLINE'))}
-          >Online</button>
+          >{t('Online')}</button>
           <button 
              className={demoCameraStatus === 'OFFLINE' ? 'active' : ''} 
              onClick={() => dispatch(setCameraStatus('OFFLINE'))}
-          >Offline</button>
+          >{t('Offline')}</button>
         </div>
       </div>
 
       <div className="demo-section">
-        <h4>AI Simulation</h4>
+        <h4>{t('AI Simulation')}</h4>
         {!isThreatActive ? (
           <button className="btn btn-primary w-100" onClick={() => dispatch(triggerThreatSimulation())}>
-            Simulate Threat
+            {t('Simulate Threat')}
           </button>
         ) : (
-          <button 
-            className="btn btn-outline w-100" 
-            onClick={() => {
-              const activeIncident = incidents.find(i => i.status !== 'RESOLVED' && i.status !== 'FALSE_POSITIVE');
-              if (activeIncident) {
-                // Must be Org Admin or SuperAdmin to resolve via demo controls, or we just rely on Thunk to reject
-                 dispatch(resolveDemoIncident(activeIncident.id, 'RESOLVED'));
-              }
-            }}
-          >
-            Resolve Threat
-          </button>
+          activeIncident?.status === 'NEW' ? (
+            <button 
+              className="btn btn-primary w-100" 
+              onClick={() => dispatch(acknowledgeDemoIncident(activeIncident.id))}
+            >
+              {t('Acknowledge Threat')}
+            </button>
+          ) : (
+            <button 
+              className="btn btn-outline w-100" 
+              disabled={!canResolve}
+              title={!canResolve ? t('You need ORGANIZATION_ADMIN or higher permissions to resolve.') : ''}
+              onClick={() => {
+                if (activeIncident && canResolve) {
+                  dispatch(resolveDemoIncident(activeIncident.id, 'RESOLVED'));
+                }
+              }}
+            >
+              {t('Resolve Threat')}
+            </button>
+          )
         )}
       </div>
     </div>

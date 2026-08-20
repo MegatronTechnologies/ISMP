@@ -14,55 +14,59 @@ const Home = () => {
       {/* Hero Section */}
       <section className="hero">
         <div className="container">
-          <div className="hero-content">
-            <motion.h1 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              {t('Transform Passive CCTV Into Real-Time AI Intelligence')}
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-            >
-              {t('Detect threats in milliseconds, automate recording, and trigger instant emergency response.')}
-            </motion.p>
-            <motion.div 
-              className="hero-cta"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              <Link to="/register" className="btn btn-primary btn-lg">{t('Get Started')}</Link>
-              <a href="#how-it-works" className="btn btn-outline btn-lg">{t('Explore Platform')}</a>
-            </motion.div>
-          </div>
-          
-          <div className="hero-visual">
-            <motion.div 
-              className="dashboard-mockup"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.7, delay: 0.3 }}
-            >
-              <div className="mockup-header">
-                <div className="dots"><span/><span/><span/></div>
-                <div className="title">ISMP Live Feed</div>
-              </div>
-              <div className="mockup-body">
-                <div className="video-feed alert">
+          <div className="hero-grid">
+            <div className="hero-content">
+              <motion.h1 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                {t('Transform Passive CCTV Into Real-Time AI Intelligence')}
+              </motion.h1>
+              <motion.p
+                className="subtitle"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+              >
+                {t('Detect threats in milliseconds, automate recording, and trigger instant emergency response.')}
+              </motion.p>
+              <motion.div 
+                className="hero-actions"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                <Link to="/about-project" className="btn btn-primary btn-lg">{t('Explore Platform')}</Link>
+                <a href="#how-it-works" className="btn btn-outline btn-lg">{t('How It Works')}</a>
+              </motion.div>
+            </div>
+            
+            <div className="hero-visual">
+              <motion.div 
+                className="visual-mockup"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.7, delay: 0.3 }}
+              >
+                <div className="mockup-header">
+                  <div className="rec-indicator">
+                    <span className="dot"></span>
+                    <span>REC</span>
+                  </div>
+                  <div className="meta">1080P | 30FPS</div>
+                </div>
+                <div className="mockup-body">
                   <div className="bounding-box">
-                    <span className="label">{t('WEAPON')} 91%</span>
+                    <span className="label">{t('WEAPON')} 94%</span>
                   </div>
                 </div>
                 <div className="mockup-footer">
-                  <div className="status error"><ShieldAlert size={16} /> {t('THREAT DETECTED')}</div>
+                  <div className="status"><ShieldAlert size={16} /> {t('THREAT DETECTED')}</div>
                   <div className="engine">{t('YOLOv8 ACTIVE')}</div>
                 </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            </div>
           </div>
         </div>
       </section>

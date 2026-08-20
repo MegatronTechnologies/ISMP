@@ -1,6 +1,6 @@
 {
-  "name": "",
-  "description": "",
+  "name": "ISMP",
+  "description": "Intelligent Security Monitoring Platform",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

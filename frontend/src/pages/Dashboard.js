@@ -21,7 +21,7 @@ const Dashboard = () => {
 
   const incidents24h = incidents.filter(i => new Date(i.startedAt) >= twentyFourHoursAgo);
   const newCount = incidents24h.filter(i => i.status === 'NEW').length;
-  const resolvedCount = incidents24h.filter(i => i.status === 'RESOLVED').length;
+  const resolvedCount = incidents.filter(i => i.status === 'RESOLVED' && i.resolvedAt && new Date(i.resolvedAt) >= twentyFourHoursAgo).length;
   
   // Calculate average response time (from start to acknowledge)
   let totalResponseMs = 0;
@@ -41,11 +41,13 @@ const Dashboard = () => {
   const avgResponseDisplay = avgResponseSecs > 60 ? `${Math.floor(avgResponseSecs/60)}m ${avgResponseSecs%60}s` : `${avgResponseSecs}s`;
   
   const statusData = [
-    { name: 'RESOLVED', value: incidents.filter(i => i.status === 'RESOLVED').length || 1 },
-    { name: 'FALSE_POSITIVE', value: incidents.filter(i => i.status === 'FALSE_POSITIVE').length || 0 },
-    { name: 'ACKNOWLEDGED', value: incidents.filter(i => i.status === 'ACKNOWLEDGED').length || 0 },
-    { name: 'NEW', value: incidents.filter(i => i.status === 'NEW').length || 0 },
+    { name: 'RESOLVED', value: incidents.filter(i => i.status === 'RESOLVED').length },
+    { name: 'FALSE_POSITIVE', value: incidents.filter(i => i.status === 'FALSE_POSITIVE').length },
+    { name: 'ACKNOWLEDGED', value: incidents.filter(i => i.status === 'ACKNOWLEDGED').length },
+    { name: 'NEW', value: incidents.filter(i => i.status === 'NEW').length },
   ];
+
+  const pieData = statusData.filter(d => d.value > 0);
 
   const mockDailyData = [
     { name: t('Mon'), incidents: 2 },
@@ -124,17 +126,18 @@ const Dashboard = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={statusData}
+                      data={pieData.length > 0 ? pieData : [{ name: 'NEW', value: 0 }]}
                       cx="50%"
                       cy="50%"
                       innerRadius={60}
                       outerRadius={90}
-                      paddingAngle={5}
+                      paddingAngle={pieData.length > 1 ? 5 : 0}
                       dataKey="value"
                     >
-                      {statusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
+                      {pieData.map((entry) => {
+                        const idx = statusData.findIndex(s => s.name === entry.name);
+                        return <Cell key={entry.name} fill={COLORS[idx >= 0 ? idx : 0]} />;
+                      })}
                     </Pie>
                     <Tooltip formatter={(value, name) => [value, t(name)]} contentStyle={{backgroundColor: '#121214', border: '1px solid #2a2a2e'}} />
                   </PieChart>

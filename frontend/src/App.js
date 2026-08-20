@@ -14,11 +14,20 @@ import Contact from './pages/Contact';
 import Profile from './pages/Profile';
 import Notifications from './pages/Notifications';
 import NotFound from './pages/NotFound';
-
+import { useTranslation } from 'react-i18next';
 import Layout from './components/Layout';
-const AdminPlaceholder = ({ title }) => (
-  <Layout><div className="container" style={{padding: '2rem 0'}}><h2>{title} (Admin Area)</h2><p>This section is restricted and under development.</p></div></Layout>
-);
+
+const AdminPlaceholder = ({ title }) => {
+  const { t } = useTranslation();
+  return (
+    <Layout>
+      <div className="container" style={{padding: '2rem 0'}}>
+        <h2>{t(title)} ({t('Admin Area')})</h2>
+        <p>{t('This section is restricted and under development.')}</p>
+      </div>
+    </Layout>
+  );
+};
 
 const App = () => {
   useEffect(() => {

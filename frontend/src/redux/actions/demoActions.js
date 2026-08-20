@@ -43,10 +43,10 @@ export const triggerThreatSimulation = () => (dispatch, getState) => {
     type: 'critical',
     title: 'SECURITY ALERT: Potential Weapon Detected',
     time: timestamp,
-    desc: 'Camera: Main Gate (Cam-01). Confidence: 94%',
+    desc: 'Camera: {{camera}}. Confidence: {{confidence}}%',
     read: false,
     incidentId: incidentId,
-    payload: { confidence: 94, camera: "Main Gate (Cam-01)" } // used for structured translations
+    payload: { confidence: 94, camera: "Main Gate (Cam-01)" }
   }));
   
   // 4. Audit Event

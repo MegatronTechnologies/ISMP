@@ -2,7 +2,16 @@ import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
   notifications: [
-    { id: 1, type: 'critical', title: 'Weapon Detected', time: new Date(Date.now() - 600000).toISOString(), desc: 'Camera: Main Gate (Cam-01). Confidence: 94%', read: false, incidentId: 'INC-1040' },
+    { 
+      id: 'NOTIF-1', 
+      type: 'critical', 
+      title: 'SECURITY ALERT: Potential Weapon Detected', 
+      time: new Date(Date.now() - 600000).toISOString(), 
+      desc: 'Camera: {{camera}}. Confidence: {{confidence}}%', 
+      read: false, 
+      incidentId: 'INC-1040',
+      payload: { confidence: 94, camera: "Main Gate (Cam-01)" }
+    },
   ],
 };
 

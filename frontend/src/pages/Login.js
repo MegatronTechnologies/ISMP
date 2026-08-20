@@ -16,7 +16,17 @@ const Login = () => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    dispatch(login({ email }));
+    const username = email ? email.split('@')[0] : 'admin';
+    const displayName = username.charAt(0).toUpperCase() + username.slice(1);
+    dispatch(login({
+      user: {
+        name: displayName || 'Demo User',
+        email: email || 'admin@ismp.az',
+        role: 'SUPERADMIN',
+        organization: 'ISMP Security'
+      },
+      token: 'mock-jwt-token-demo'
+    }));
     navigate('/dashboard');
   };
 

@@ -1,15 +1,52 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Layout from '../components/Layout';
+import aydinPhoto from '../assets/team/aydin.jpg';
+import emilPhoto from '../assets/team/emil.jpg';
+import leylaPhoto from '../assets/team/leyla.jpg';
 import './InfoPages.scss';
 
-// Note: Real images were requested but are missing from the environment.
-// Using placeholders gracefully as requested when binary files are absent.
 const team = [
-  { name: 'Sulxayev Aydın', role: 'AI · Database · YOLO', file: '/assets/team/aydin.jpeg' },
-  { name: 'Qurbanova Leyla', role: 'Backend', file: '/assets/team/leyla.jpeg' },
-  { name: 'Əliyev Emil', role: 'Frontend', file: '/assets/team/emil.jpeg' },
+  { 
+    name: 'Sulxayev Aydın', 
+    role: 'AI · Database · YOLO',
+    photo: aydinPhoto
+  },
+  { 
+    name: 'Qurbanova Leyla', 
+    role: 'Backend',
+    photo: leylaPhoto
+  },
+  { 
+    name: 'Əliyev Emil', 
+    role: 'Frontend',
+    photo: emilPhoto
+  },
 ];
+
+const TeamMemberCard = ({ member }) => {
+  const [imageError, setImageError] = useState(false);
+  const initials = member.name.split(' ').map(n => n[0]).join('');
+
+  return (
+    <div className="team-card">
+      <div className="avatar-wrapper">
+        {!imageError && member.photo ? (
+          <img 
+            src={member.photo} 
+            alt={member.name} 
+            referrerPolicy="no-referrer"
+            onError={() => setImageError(true)} 
+          />
+        ) : (
+          <span className="initials-fallback">{initials}</span>
+        )}
+      </div>
+      <h3>{member.name}</h3>
+      <p className="role">{member.role}</p>
+    </div>
+  );
+};
 
 const AboutUs = () => {
   const { t } = useTranslation();
@@ -22,18 +59,9 @@ const AboutUs = () => {
             <p style={{color: 'var(--text-secondary)', marginTop: '0.5rem'}}>{t('The engineering team behind ISMP')}</p>
           </div>
           
-          <div className="team-grid" style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem', marginTop: '3rem'}}>
+          <div className="team-grid">
             {team.map(member => (
-              <div className="team-card" key={member.name} style={{backgroundColor: 'var(--bg-secondary)', padding: '2rem', borderRadius: '12px', textAlign: 'center', border: '1px solid var(--border-color)'}}>
-                <div className="avatar-wrapper" style={{width: '120px', height: '120px', margin: '0 auto 1.5rem', borderRadius: '50%', overflow: 'hidden', backgroundColor: 'var(--bg-tertiary)'}}>
-                  <img src={member.file} alt={member.name} style={{width: '100%', height: '100%', objectFit: 'cover'}} onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
-                  <div className="avatar-placeholder" style={{display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)', fontSize: '0.8rem'}}>
-                    {member.name.split(' ').map(n=>n[0]).join('')}
-                  </div>
-                </div>
-                <h3 style={{marginBottom: '0.5rem', color: 'var(--text-primary)'}}>{member.name}</h3>
-                <p className="role" style={{color: 'var(--red-holberton)', fontSize: '0.9rem', fontWeight: '500'}}>{member.role}</p>
-              </div>
+              <TeamMemberCard key={member.name} member={member} />
             ))}
           </div>
         </div>
@@ -41,4 +69,5 @@ const AboutUs = () => {
     </Layout>
   );
 };
+
 export default AboutUs;

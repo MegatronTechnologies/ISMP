@@ -45,36 +45,72 @@
 
   .team-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 2.5rem;
+    max-width: 1000px;
+    margin: 0 auto;
     
     .team-card {
       background: var(--bg-secondary);
       border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 2rem;
+      border-radius: 12px;
+      padding: 2.5rem 1.5rem;
       text-align: center;
-      transition: transform 0.2s;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
       
-      &:hover { transform: translateY(-5px); }
+      &:hover { 
+        transform: translateY(-5px);
+        border-color: rgba(224, 58, 60, 0.4);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+      }
       
-      .avatar-placeholder {
-        width: 120px;
-        height: 120px;
+      .avatar-wrapper {
+        width: 140px;
+        height: 140px;
         background: var(--bg-tertiary);
         border-radius: 50%;
         margin: 0 auto 1.5rem;
+        overflow: hidden;
         display: flex;
         align-items: center;
         justify-content: center;
-        border: 2px dashed var(--border-color);
-        color: var(--text-tertiary);
-        font-family: var(--font-mono);
-        font-size: 0.8rem;
+        border: 3px solid var(--border-color);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        transition: border-color 0.2s;
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          object-position: center;
+          display: block;
+        }
+
+        .initials-fallback {
+          font-family: var(--font-mono);
+          font-size: 1.75rem;
+          font-weight: 700;
+          color: var(--text-primary);
+        }
+      }
+
+      &:hover .avatar-wrapper {
+        border-color: var(--red-holberton);
       }
       
-      h3 { font-size: 1.25rem; margin-bottom: 0.5rem; }
-      .role { color: var(--red-holberton); font-weight: 500; font-size: 0.9rem; }
+      h3 { 
+        font-size: 1.25rem; 
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+        font-weight: 600;
+      }
+      
+      .role { 
+        color: var(--red-holberton); 
+        font-weight: 600; 
+        font-size: 0.9rem;
+        letter-spacing: 0.02em;
+      }
     }
   }
 
