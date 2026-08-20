@@ -14,20 +14,7 @@ import Contact from './pages/Contact';
 import Profile from './pages/Profile';
 import Notifications from './pages/Notifications';
 import NotFound from './pages/NotFound';
-import { useTranslation } from 'react-i18next';
-import Layout from './components/Layout';
-
-const AdminPlaceholder = ({ title }) => {
-  const { t } = useTranslation();
-  return (
-    <Layout>
-      <div className="container" style={{padding: '2rem 0'}}>
-        <h2>{t(title)} ({t('Admin Area')})</h2>
-        <p>{t('This section is restricted and under development.')}</p>
-      </div>
-    </Layout>
-  );
-};
+import AdminPanelPage from './pages/AdminPanelPage';
 
 const App = () => {
   useEffect(() => {
@@ -57,24 +44,24 @@ const App = () => {
 
         {/* Organization Admin Routes */}
         <Route element={<RoleGuard allowedRoles={['ORGANIZATION_ADMIN', 'SUPERADMIN']} />}>
-          <Route path="/org-admin/users" element={<AdminPlaceholder title="Organization Users" />} />
-          <Route path="/org-admin/registration-requests" element={<AdminPlaceholder title="Registration Requests" />} />
-          <Route path="/org-admin/analytics" element={<AdminPlaceholder title="Analytics" />} />
-          <Route path="/org-admin/audit-log" element={<AdminPlaceholder title="Organization Audit Log" />} />
+          <Route path="/org-admin/users" element={<AdminPanelPage title="Organization Users" sectionKey="org-users" />} />
+          <Route path="/org-admin/registration-requests" element={<AdminPanelPage title="Registration Requests" sectionKey="registration-requests" />} />
+          <Route path="/org-admin/analytics" element={<AdminPanelPage title="Analytics" sectionKey="analytics" />} />
+          <Route path="/org-admin/audit-log" element={<AdminPanelPage title="Organization Audit Log" sectionKey="audit-log" />} />
         </Route>
 
         {/* SuperAdmin Routes */}
         <Route element={<RoleGuard allowedRoles={['SUPERADMIN']} />}>
-          <Route path="/admin/dashboard" element={<AdminPlaceholder title="SuperAdmin Dashboard" />} />
-          <Route path="/admin/organizations" element={<AdminPlaceholder title="Organizations Management" />} />
-          <Route path="/admin/users" element={<AdminPlaceholder title="Global Users" />} />
-          <Route path="/admin/organization-admins" element={<AdminPlaceholder title="Org Admins" />} />
-          <Route path="/admin/cameras" element={<AdminPlaceholder title="Global Cameras" />} />
-          <Route path="/admin/incidents" element={<AdminPlaceholder title="All Incidents" />} />
-          <Route path="/admin/contact-requests" element={<AdminPlaceholder title="Contact Requests" />} />
-          <Route path="/admin/audit-logs" element={<AdminPlaceholder title="Global Audit Logs" />} />
-          <Route path="/admin/trash" element={<AdminPlaceholder title="Trash / Archive" />} />
-          <Route path="/admin/settings" element={<AdminPlaceholder title="System Settings" />} />
+          <Route path="/admin/dashboard" element={<AdminPanelPage title="SuperAdmin Dashboard" sectionKey="dashboard" />} />
+          <Route path="/admin/organizations" element={<AdminPanelPage title="Organizations Management" sectionKey="organizations" />} />
+          <Route path="/admin/users" element={<AdminPanelPage title="Global Users" sectionKey="users" />} />
+          <Route path="/admin/organization-admins" element={<AdminPanelPage title="Org Admins" sectionKey="organization-admins" />} />
+          <Route path="/admin/cameras" element={<AdminPanelPage title="Global Cameras" sectionKey="cameras" />} />
+          <Route path="/admin/incidents" element={<AdminPanelPage title="All Incidents" sectionKey="incidents" />} />
+          <Route path="/admin/contact-requests" element={<AdminPanelPage title="Contact Requests" sectionKey="contact-requests" />} />
+          <Route path="/admin/audit-logs" element={<AdminPanelPage title="Global Audit Logs" sectionKey="audit-logs" />} />
+          <Route path="/admin/trash" element={<AdminPanelPage title="Trash / Archive" sectionKey="trash" />} />
+          <Route path="/admin/settings" element={<AdminPanelPage title="System Settings" sectionKey="settings" />} />
         </Route>
 
         {/* 404 Route */}

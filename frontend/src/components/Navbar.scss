@@ -33,15 +33,177 @@
   }
 
   .nav-links {
-    gap: 2rem;
+    gap: 1.5rem;
     
     a:not(.btn) {
       font-weight: 500;
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       transition: color 0.2s;
+      color: var(--text-secondary);
       
-      &:hover {
+      &:hover, &.active-link {
         color: var(--red-holberton);
+      }
+    }
+  }
+
+  .nav-dropdown {
+    position: relative;
+
+    .dropdown-trigger {
+      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.4rem 0.75rem;
+      color: var(--text-primary);
+      font-size: 0.88rem;
+      font-weight: 600;
+      gap: 0.4rem;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover, &.active-link {
+        border-color: var(--red-holberton);
+        color: var(--red-holberton);
+        background: rgba(224, 58, 60, 0.05);
+      }
+
+      .rotate-180 {
+        transform: rotate(180deg);
+        transition: transform 0.2s;
+      }
+    }
+
+    .dropdown-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.5rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      z-index: 1010;
+      min-width: 220px;
+      animation: fadeIn 0.15s ease-out;
+
+      .dropdown-header {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-tertiary);
+        padding: 0.4rem 0.75rem 0.5rem;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 0.35rem;
+        font-weight: 700;
+      }
+
+      .dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.55rem 0.75rem;
+        border-radius: 6px;
+        color: var(--text-primary) !important;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: background 0.15s, color 0.15s;
+
+        &:hover {
+          background: var(--bg-tertiary);
+          color: var(--red-holberton) !important;
+        }
+      }
+
+      &.dropdown-menu-wide {
+        min-width: 380px;
+
+        .dropdown-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0.25rem;
+        }
+      }
+    }
+  }
+
+  .user-menu {
+    .user-profile-link {
+      text-decoration: none;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      transition: background 0.2s;
+
+      &:hover {
+        background: var(--bg-tertiary);
+      }
+
+      .user-avatar-circle {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-secondary);
+      }
+
+      .user-info-column {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        line-height: 1.2;
+
+        .user-display-name {
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: var(--text-primary);
+        }
+      }
+    }
+
+    .role-pill {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.1rem 0.45rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-top: 0.15rem;
+
+      &.role-user {
+        background: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+        border: 1px solid rgba(59, 130, 246, 0.3);
+      }
+
+      &.role-org-admin {
+        background: rgba(245, 158, 11, 0.15);
+        color: #fbbf24;
+        border: 1px solid rgba(245, 158, 11, 0.3);
+      }
+
+      &.role-superadmin {
+        background: rgba(224, 58, 60, 0.15);
+        color: #f87171;
+        border: 1px solid rgba(224, 58, 60, 0.3);
+      }
+    }
+
+    .logout-btn {
+      background: none;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 0.4rem;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover {
+        color: var(--red-holberton) !important;
+        background: rgba(224, 58, 60, 0.1);
+        border-color: rgba(224, 58, 60, 0.2);
       }
     }
   }

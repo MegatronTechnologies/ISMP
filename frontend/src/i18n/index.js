@@ -208,7 +208,25 @@ const resources = {
       "Online": "Online",
       "Offline": "Offline",
       "ISMP Live Feed": "ISMP Live Feed",
-      "Main Gate (Cam-01)": "Main Gate (Cam-01)"
+      "Main Gate (Cam-01)": "Main Gate (Cam-01)",
+      "Demo Access": "Demo Access",
+      "Continue as User": "Continue as User",
+      "Continue as Organization Admin": "Continue as Organization Admin",
+      "Continue as SuperAdmin": "Continue as SuperAdmin",
+      "Organization Panel": "Organization Panel",
+      "SuperAdmin Panel": "SuperAdmin Panel",
+      "Demo Controls": "Demo Controls",
+      "Toggle Demo Controls": "Toggle Demo Controls",
+      "Demo Mode Notice": "Demo Mode Notice",
+      "This administrative section is currently operating in Demo Mode.": "This administrative section is currently operating in Demo Mode. Real backend administration will be connected in future releases.",
+      "or continue with demo access": "or continue with demo access",
+      "Quick Switch": "Quick Switch",
+      "Active Role": "Active Role",
+      "Current Active Role": "Current Active Role",
+      "Administrative Overview": "Administrative Overview",
+      "Simulated Backend Record": "Simulated Backend Record",
+      "Live Demo Metrics": "Live Demo Metrics",
+      "All sections are discoverable and pre-connected to the live simulation engine.": "All sections are discoverable and pre-connected to the live simulation engine."
     }
   },
   az: {
@@ -416,7 +434,25 @@ const resources = {
       "Online": "Onlayn",
       "Offline": "Oflayn",
       "ISMP Live Feed": "ISMP Canlı Yayımlar",
-      "Main Gate (Cam-01)": "Əsas Giriş (Cam-01)"
+      "Main Gate (Cam-01)": "Əsas Giriş (Cam-01)",
+      "Demo Access": "Demo Giriş",
+      "Continue as User": "İstifadəçi Kimi Davam Et",
+      "Continue as Organization Admin": "Təşkilat İnzibatçısı Kimi Davam Et",
+      "Continue as SuperAdmin": "SuperAdmin Kimi Davam Et",
+      "Organization Panel": "Təşkilat Paneli",
+      "SuperAdmin Panel": "SuperAdmin Paneli",
+      "Demo Controls": "Demo Nəzarət",
+      "Toggle Demo Controls": "Demo Nəzarəti Aç/Bağla",
+      "Demo Mode Notice": "Demo Rejimi Bildirişi",
+      "This administrative section is currently operating in Demo Mode.": "Bu inzibati bölmə hazırda Demo rejimində işləyir. Real server inzibatçılığı gələcək buraxılışlarda qoşulacaqdır.",
+      "or continue with demo access": "və ya demo giriş ilə davam edin",
+      "Quick Switch": "Sürətli Keçid",
+      "Active Role": "Aktiv Rol",
+      "Current Active Role": "Cari Aktiv Rol",
+      "Administrative Overview": "İnzibati İcmal",
+      "Simulated Backend Record": "Simulyasiya Edilmiş Məlumat",
+      "Live Demo Metrics": "Canlı Demo Metrikaları",
+      "All sections are discoverable and pre-connected to the live simulation engine.": "Bütün bölmələr aşkar edilə biləndir və canlı simulyasiya mühərrikinə qoşulub."
     }
   },
   ru: {
@@ -624,7 +660,25 @@ const resources = {
       "Online": "Онлайн",
       "Offline": "Оффлайн",
       "ISMP Live Feed": "Прямой эфир ISMP",
-      "Main Gate (Cam-01)": "Главные ворота (Cam-01)"
+      "Main Gate (Cam-01)": "Главные ворота (Cam-01)",
+      "Demo Access": "Демо доступ",
+      "Continue as User": "Продолжить как Пользователь",
+      "Continue as Organization Admin": "Продолжить как Админ организации",
+      "Continue as SuperAdmin": "Продолжить как СуперАдмин",
+      "Organization Panel": "Панель организации",
+      "SuperAdmin Panel": "Панель СуперАдмина",
+      "Demo Controls": "Демо Управление",
+      "Toggle Demo Controls": "Переключить Демо Управление",
+      "Demo Mode Notice": "Уведомление о демо-режиме",
+      "This administrative section is currently operating in Demo Mode.": "Этот административный раздел в настоящее время работает в демо-режиме. Реальное администрирование будет подключено в будущих версиях.",
+      "or continue with demo access": "или продолжить через демо-доступ",
+      "Quick Switch": "Быстрый переход",
+      "Active Role": "Активная роль",
+      "Current Active Role": "Текущая активная роль",
+      "Administrative Overview": "Обзор администрирования",
+      "Simulated Backend Record": "Симулированные данные бэкенда",
+      "Live Demo Metrics": "Метрики живого демо",
+      "All sections are discoverable and pre-connected to the live simulation engine.": "Все разделы доступны для просмотра и подключены к движку симуляции в реальном времени."
     }
   }
 };
