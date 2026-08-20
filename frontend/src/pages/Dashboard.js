@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Camera, ShieldAlert, CheckCircle, AlertTriangle } from 'lucide-react';
 import Layout from '../components/Layout';
@@ -16,16 +17,22 @@ const mockDailyData = [
   { name: 'Sun', incidents: 1 },
 ];
 
-const mockStatusData = [
-  { name: 'Resolved', value: 400 },
-  { name: 'False Positive', value: 300 },
-  { name: 'Acknowledged', value: 100 },
-  { name: 'New', value: 50 },
-];
 const COLORS = ['#2ecc71', '#95a5a6', '#f39c12', '#e74c3c'];
 
 const Dashboard = () => {
   const { t } = useTranslation();
+  const { incidents } = useSelector(state => state.incidents);
+  const { demoCameraStatus } = useSelector(state => state.simulation);
+  
+  const newCount = incidents.filter(i => i.status === 'NEW').length;
+  const resolvedCount = incidents.filter(i => i.status === 'RESOLVED').length;
+  
+  const statusData = [
+    { name: 'Resolved', value: incidents.filter(i => i.status === 'RESOLVED').length || 1 },
+    { name: 'False Positive', value: incidents.filter(i => i.status === 'FALSE_POSITIVE').length || 0 },
+    { name: 'Acknowledged', value: incidents.filter(i => i.status === 'ACKNOWLEDGED').length || 0 },
+    { name: 'New', value: incidents.filter(i => i.status === 'NEW').length || 0 },
+  ];
 
   return (
     <Layout>
@@ -34,7 +41,7 @@ const Dashboard = () => {
           <div className="page-header">
             <h2>{t('Dashboard')}</h2>
             <div className="header-actions">
-              <span className="last-updated">Last updated: Just now</span>
+              <span className="last-updated">{t('Last updated: Just now')}</span>
             </div>
           </div>
 
@@ -42,31 +49,31 @@ const Dashboard = () => {
             <div className="stat-card">
               <div className="stat-icon"><Camera size={24} /></div>
               <div className="stat-details">
-                <span className="stat-label">Active Cameras</span>
-                <span className="stat-value">1 / 1</span>
+                <span className="stat-label">{t('Active Cameras')}</span>
+                <span className="stat-value">{demoCameraStatus === 'ONLINE' ? '1 / 1' : '0 / 1'}</span>
               </div>
             </div>
             
             <div className="stat-card warning">
               <div className="stat-icon"><ShieldAlert size={24} /></div>
               <div className="stat-details">
-                <span className="stat-label">New Incidents (24h)</span>
-                <span className="stat-value">3</span>
+                <span className="stat-label">{t('New Incidents (24h)')}</span>
+                <span className="stat-value">{newCount}</span>
               </div>
             </div>
             
             <div className="stat-card success">
               <div className="stat-icon"><CheckCircle size={24} /></div>
               <div className="stat-details">
-                <span className="stat-label">Resolved (24h)</span>
-                <span className="stat-value">12</span>
+                <span className="stat-label">{t('Resolved (24h)')}</span>
+                <span className="stat-value">{resolvedCount}</span>
               </div>
             </div>
             
             <div className="stat-card">
               <div className="stat-icon"><AlertTriangle size={24} /></div>
               <div className="stat-details">
-                <span className="stat-label">Avg Response Time</span>
+                <span className="stat-label">{t('Avg Response Time')}</span>
                 <span className="stat-value">14s</span>
               </div>
             </div>
@@ -74,7 +81,7 @@ const Dashboard = () => {
 
           <div className="charts-layout">
             <div className="chart-card">
-              <h3>Incidents by Day</h3>
+              <h3>{t('Incidents by Day')}</h3>
               <div className="chart-container">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={mockDailyData}>
@@ -89,12 +96,12 @@ const Dashboard = () => {
             </div>
             
             <div className="chart-card">
-              <h3>Incident Status Distribution</h3>
+              <h3>{t('Incident Status Distribution')}</h3>
               <div className="chart-container">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={mockStatusData}
+                      data={statusData}
                       cx="50%"
                       cy="50%"
                       innerRadius={60}
@@ -102,7 +109,7 @@ const Dashboard = () => {
                       paddingAngle={5}
                       dataKey="value"
                     >
-                      {mockStatusData.map((entry, index) => (
+                      {statusData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
@@ -111,10 +118,10 @@ const Dashboard = () => {
                 </ResponsiveContainer>
               </div>
               <div className="pie-legend">
-                {mockStatusData.map((entry, index) => (
+                {statusData.map((entry, index) => (
                   <div key={index} className="legend-item">
                     <span className="color-dot" style={{backgroundColor: COLORS[index % COLORS.length]}}></span>
-                    <span className="label">{entry.name}</span>
+                    <span className="label">{t(entry.name)}</span>
                   </div>
                 ))}
               </div>
@@ -123,42 +130,30 @@ const Dashboard = () => {
 
           <div className="recent-incidents">
             <div className="card-header">
-              <h3>Recent Incidents</h3>
-              <Link to="/incidents" className="view-all">View All</Link>
+              <h3>{t('Recent Incidents')}</h3>
+              <Link to="/incidents" className="view-all">{t('View All')}</Link>
             </div>
             <div className="table-responsive">
               <table className="table">
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Camera</th>
-                    <th>Type</th>
-                    <th>Time</th>
-                    <th>Status</th>
+                    <th>{t('ID')}</th>
+                    <th>{t('Camera')}</th>
+                    <th>{t('Type')}</th>
+                    <th>{t('Time')}</th>
+                    <th>{t('Status')}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td>#INC-1042</td>
-                    <td>Demo Camera</td>
-                    <td><span className="badge threat">WEAPON</span></td>
-                    <td>10 mins ago</td>
-                    <td><span className="status-badge new">NEW</span></td>
-                  </tr>
-                  <tr>
-                    <td>#INC-1041</td>
-                    <td>Demo Camera</td>
-                    <td><span className="badge threat">WEAPON</span></td>
-                    <td>1 hour ago</td>
-                    <td><span className="status-badge ack">ACKNOWLEDGED</span></td>
-                  </tr>
-                  <tr>
-                    <td>#INC-1040</td>
-                    <td>Demo Camera</td>
-                    <td><span className="badge threat">WEAPON</span></td>
-                    <td>5 hours ago</td>
-                    <td><span className="status-badge resolved">RESOLVED</span></td>
-                  </tr>
+                  {incidents.slice(0, 5).map(inc => (
+                    <tr key={inc.id}>
+                      <td>#{inc.id}</td>
+                      <td>{inc.cameraName}</td>
+                      <td><span className="badge threat">{t(inc.detectionType)}</span></td>
+                      <td>{new Date(inc.startedAt).toLocaleTimeString()}</td>
+                      <td><span className={`status-badge ${inc.status.toLowerCase()}`}>{t(inc.status)}</span></td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

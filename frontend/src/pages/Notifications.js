@@ -1,17 +1,16 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSelector, useDispatch } from 'react-redux';
+import { Link } from 'react-router-dom';
 import { Bell, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { markAllAsRead, markAsRead } from '../redux/slices/notificationSlice';
 import Layout from '../components/Layout';
 import './Notifications.scss';
 
 const Notifications = () => {
   const { t } = useTranslation();
-
-  const mockNotifications = [
-    { id: 1, type: 'critical', title: 'Weapon Detected', time: '10 mins ago', desc: 'Camera: Main Gate (Cam-01). Confidence: 94%' },
-    { id: 2, type: 'warning', title: 'Camera Offline', time: '1 hour ago', desc: 'Camera: Cafeteria (Cam-03) lost connection.' },
-    { id: 3, type: 'info', title: 'System Update', time: '1 day ago', desc: 'ISMP Backend successfully updated to v1.2' },
-  ];
+  const dispatch = useDispatch();
+  const { notifications } = useSelector(state => state.notifications);
 
   return (
     <Layout>
@@ -19,20 +18,27 @@ const Notifications = () => {
         <div className="container">
           <div className="page-header d-flex justify-between align-center">
             <h2>{t('Notifications')}</h2>
-            <button className="btn btn-outline btn-sm">Mark all as read</button>
+            <button className="btn btn-outline btn-sm" onClick={() => dispatch(markAllAsRead())}>{t('Mark all as read')}</button>
           </div>
 
           <div className="notifications-list">
-            {mockNotifications.map(note => (
-              <div key={note.id} className={`notification-card \${note.type}`}>
+            {notifications.length === 0 ? (
+               <div className="empty-state" style={{padding: '2rem', textAlign: 'center', color: 'var(--text-tertiary)'}}>{t('No notifications yet.')}</div>
+            ) : notifications.map(note => (
+              <div key={note.id} className={`notification-card ${note.type} ${note.read ? 'read' : 'unread'}`} onClick={() => !note.read && dispatch(markAsRead(note.id))}>
                 <div className="icon">
                   {note.type === 'critical' ? <ShieldAlert /> : note.type === 'warning' ? <AlertTriangle /> : <Bell />}
                 </div>
                 <div className="content">
-                  <h4>{note.title}</h4>
-                  <p>{note.desc}</p>
-                  <span className="time">{note.time}</span>
+                  <h4>
+                    {note.incidentId ? (
+                       <Link to={`/incidents/${note.incidentId}`}>{t(note.title)}</Link>
+                    ) : t(note.title)}
+                  </h4>
+                  <p>{t(note.desc)}</p>
+                  <span className="time">{new Date(note.time).toLocaleString()}</span>
                 </div>
+                {!note.read && <div className="unread-dot" style={{width: '8px', height: '8px', backgroundColor: 'var(--red-holberton)', borderRadius: '50%', alignSelf: 'center'}}></div>}
               </div>
             ))}
           </div>

@@ -25,6 +25,8 @@ Copy `.env.example` to `.env` and fill in the details:
 ```env
 PORT=3000
 NODE_ENV=development
+DEMO_MODE=true
+# External Databases
 MYSQL_HOST=localhost
 MYSQL_USER=root
 MYSQL_PASSWORD=root
@@ -41,61 +43,26 @@ JWT_SECRET=your_jwt_secret
    npm install
    ```
 
-2. Start the development server (runs both Backend and Webpack Dev Middleware):
+2. Start the development server:
    ```bash
    npm run dev
    ```
 
 3. The application will be accessible at `http://localhost:3000/`.
 
-### Windows Setup Considerations
-
-If running on Windows without WSL:
-- Install Redis using a Windows port or Docker.
-- Start Node scripts via standard Git Bash or Command Prompt.
-- Do not use Linux-specific shell commands in scripts without cross-platform tools like `cross-env`.
-
-## Future Python Detector Integration
-
-The prototype currently relies on a simulated threat detection panel on the frontend. The real detector will act as an edge device and push events via REST.
-
-**Expected Contract:**
-
-```http
-POST /api/cameras/:id/heartbeat
-Content-Type: application/json
-
-{
-  "status": "ONLINE",
-  "engine": "YOLOv8"
-}
-```
-
-```http
-POST /api/incidents
-Content-Type: application/json
-
-{
-  "cameraId": "demo-camera",
-  "type": "weapon",
-  "confidence": 0.94,
-  "timestamp": "2026-08-20T10:30:00Z"
-}
-```
-
 ## Simulated vs Real Features
 
-**Implemented (Real):**
-- Frontend Architecture (React, Redux, SCSS, Router)
-- Webpack build system
-- UI/UX Design System (Holberton Red, Dark Mode)
-- i18n Translation Setup (AZ, EN, RU)
-- Node.js Express server foundation
+**Currently Implemented:**
+- **Frontend Architecture:** React, Redux Toolkit, React Router, SCSS, Webpack.
+- **UI/UX Design System:** Custom styling with Holberton Red accents, Dark Mode first.
+- **i18n Translation Setup:** Full support for Azerbaijani (AZ), English (EN), and Russian (RU).
+- **Node.js Express Server:** Foundation set up for production API routing.
+- **Demo Mode Architecture:** The system currently runs in `DEMO_MODE`, which uses a factory pattern to serve in-memory Mock Repositories. Real MySQL/Redis/MongoDB repository interfaces exist but are bypassed until external services are configured.
+- **Simulation Workflow:** The "Simulate Threat" feature triggers a full mocked workflow (Incident creation, Notification dispatch, Audit Logging, and Dashboard statistics updates) using Redux Thunks.
+- **Role-Based Access Control:** Frontend routes are protected by `ProtectedRoute` and `RoleGuard` components, simulating USER, ORGANIZATION_ADMIN, and SUPERADMIN access levels.
 
-**Simulated (Demo):**
-- The backend features a full **`DEMO_MODE` fallback architecture**. By default, it runs with in-memory seeded repositories.
-- If `DEMO_MODE=true` or database connection strings are absent, it bypasses the connection attempts and uses temporary data.
-- The real repository implementations for MySQL, MongoDB, and Redis exist alongside the mock ones under `/backend/repositories` and will be activated once credentials are supplied.
-- Auth is mocked for demo UI traversal.
-- YOLO detection is simulated via the "Simulate Threat" button in Live Monitoring.
-- Database connections are mocked with static frontend states and backend memory until full ORM integration is enabled.
+**Future Features (Not Yet Implemented):**
+- **Real AI Integration:** Python + YOLOv8 + OpenCV edge service for actual threat detection.
+- **Real Database Integration:** Connecting the existing repository interfaces to live MySQL, MongoDB, and Redis instances.
+- **Live Video Streaming:** Replacing the CSS grid/placeholder with an actual WebRTC/HLS video stream from edge cameras.
+- **Real-Time WebSockets:** Replacing Redux simulations with live Socket.IO events pushed from the server.

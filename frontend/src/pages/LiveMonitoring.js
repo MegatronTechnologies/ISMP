@@ -1,13 +1,19 @@
 import React from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { Link } from 'react-router-dom';
 import { ShieldAlert, VideoOff } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import Layout from '../components/Layout';
-import { simulateThreat, resolveThreat } from '../redux/slices/simulationSlice';
 import './LiveMonitoring.scss';
 
 const LiveMonitoring = () => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const { isThreatActive, demoCameraStatus } = useSelector(state => state.simulation);
+  const { incidents } = useSelector(state => state.incidents);
+  
+  // Find active incident if any
+  const activeIncident = incidents.find(i => i.status === 'NEW' || i.status === 'ACKNOWLEDGED');
 
   return (
     <Layout>
@@ -60,40 +66,44 @@ const LiveMonitoring = () => {
                   <div className="sos-content">
                     <ShieldAlert size={28} />
                     <div className="sos-text">
-                      <div className="sos-title">SECURITY ALERT: Potential Weapon Detected</div>
+                      <div className="sos-title">{t('SECURITY ALERT: Potential Weapon Detected')}</div>
                       <div className="sos-meta">Demo Camera • {new Date().toLocaleTimeString()}</div>
                     </div>
                   </div>
-                  <button className="btn btn-outline" style={{borderColor: 'white', color: 'white'}}>View Incident</button>
+                  {activeIncident && (
+                    <Link to={`/incidents/${activeIncident.id}`} className="btn btn-outline" style={{borderColor: 'white', color: 'white', textDecoration: 'none'}}>
+                      {t('View Incident')}
+                    </Link>
+                  )}
                 </div>
               )}
             </div>
 
             <div className="side-panel">
               <div className="panel-card">
-                <h3>System Status</h3>
+                <h3>{t('System Status')}</h3>
                 
                 <div className="status-item">
-                  <span className="label">Camera Health</span>
+                  <span className="label">{t('Camera Health')}</span>
                   <span className={`value ${demoCameraStatus.toLowerCase()}`}>{demoCameraStatus}</span>
                 </div>
                 
                 <div className="status-item">
-                  <span className="label">Detection Engine</span>
+                  <span className="label">{t('Detection Engine')}</span>
                   <span className="value">YOLOv8 — Active</span>
                 </div>
                 
                 <div className="status-item">
-                  <span className="label">Detection State</span>
+                  <span className="label">{t('Detection State')}</span>
                   {isThreatActive ? (
-                    <span className="value error">Active Threat</span>
+                    <span className="value error">{t('Active Threat')}</span>
                   ) : (
-                    <span className="value success">No Active Threat</span>
+                    <span className="value success">{t('No Active Threat')}</span>
                   )}
                 </div>
                 
                 <div className="status-item">
-                  <span className="label">Last Heartbeat</span>
+                  <span className="label">{t('Last Heartbeat')}</span>
                   <span className="value mono">{new Date().toLocaleTimeString()}</span>
                 </div>
               </div>

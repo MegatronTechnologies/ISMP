@@ -2,13 +2,15 @@ import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Shield, User, Settings, Video, AlertTriangle } from 'lucide-react';
 import { setDemoRole } from '../redux/slices/authSlice';
-import { simulateThreat, resolveThreat, setCameraStatus } from '../redux/slices/simulationSlice';
+import { setCameraStatus } from '../redux/slices/simulationSlice';
+import { triggerThreatSimulation, resolveDemoIncident } from '../redux/actions/demoActions';
 import './DemoControls.scss';
 
 const DemoControls = () => {
   const dispatch = useDispatch();
   const { user, isAuthenticated } = useSelector(state => state.auth);
   const { isThreatActive, demoCameraStatus } = useSelector(state => state.simulation);
+  const { incidents } = useSelector(state => state.incidents);
 
   if (!isAuthenticated) return null;
 
@@ -54,11 +56,18 @@ const DemoControls = () => {
       <div className="demo-section">
         <h4>AI Simulation</h4>
         {!isThreatActive ? (
-          <button className="btn btn-primary w-100" onClick={() => dispatch(simulateThreat())}>
+          <button className="btn btn-primary w-100" onClick={() => dispatch(triggerThreatSimulation())}>
             Simulate Threat
           </button>
         ) : (
-          <button className="btn btn-outline w-100" onClick={() => dispatch(resolveThreat())}>
+          <button className="btn btn-outline w-100" onClick={() => {
+            const activeIncident = incidents.find(i => i.status !== 'RESOLVED' && i.status !== 'FALSE_POSITIVE');
+            if (activeIncident) {
+               dispatch(resolveDemoIncident(activeIncident.id, 'RESOLVED'));
+            } else {
+               dispatch(resolveDemoIncident(null, 'RESOLVED')); // fallback
+            }
+          }}>
             Resolve Threat
           </button>
         )}

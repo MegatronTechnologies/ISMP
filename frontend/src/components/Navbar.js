@@ -2,13 +2,14 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
-import { Shield, Camera, User, LogOut } from 'lucide-react';
+import { Shield, Camera, User, LogOut, Bell } from 'lucide-react';
 import { logout } from '../redux/slices/authSlice';
 import './Navbar.scss';
 
 const Navbar = () => {
   const { t, i18n } = useTranslation();
   const { isAuthenticated, user } = useSelector(state => state.auth);
+  const { notifications } = useSelector(state => state.notifications);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -21,6 +22,8 @@ const Navbar = () => {
     dispatch(logout());
     navigate('/');
   };
+
+  const unreadCount = notifications ? notifications.filter(n => !n.read).length : 0;
 
   return (
     <nav className="navbar">
@@ -44,7 +47,12 @@ const Navbar = () => {
               <Link to="/dashboard">{t('Dashboard')}</Link>
               <Link to="/live-monitoring">{t('Live Monitoring')}</Link>
               <Link to="/incidents">{t('Incidents')}</Link>
-              <Link to="/notifications">{t('Notifications')}</Link>
+              <Link to="/notifications" className="d-flex align-center" style={{gap: '0.25rem'}}>
+                {t('Notifications')}
+                {unreadCount > 0 && (
+                  <span className="badge notification-badge" style={{backgroundColor: 'var(--red-holberton)', color: 'white', padding: '0.1rem 0.4rem', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold'}}>{unreadCount}</span>
+                )}
+              </Link>
             </>
           )}
           
@@ -64,7 +72,7 @@ const Navbar = () => {
               <Link to="/profile" className="d-flex align-center" style={{gap: '0.5rem', color: 'var(--text-primary)'}}>
                 <User size={18} /> {user?.name}
               </Link>
-              <button onClick={handleLogout} className="btn-icon" title="Logout" style={{color: 'var(--text-secondary)'}}>
+              <button onClick={handleLogout} className="btn-icon" title={t('Logout')} style={{color: 'var(--text-secondary)'}}>
                 <LogOut size={18} />
               </button>
             </div>
