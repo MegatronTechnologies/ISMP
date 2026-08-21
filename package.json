@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node backend/server.js",
     "dev": "node backend/server.js",
-    "build": "webpack --mode production"
+    "build": "webpack --mode production",
+    "test:backend": "node --test \"backend/tests/*.test.js\""
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.0.1",
