@@ -23,6 +23,10 @@ class ConfigTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             Settings(camera_backend="INVALID").validate()
 
+    def test_invalid_configured_camera_id_is_rejected(self):
+        with self.assertRaises(ValueError):
+            Settings(configured_camera_id="camera id with spaces").validate()
+
 
 if __name__ == "__main__":
     unittest.main()

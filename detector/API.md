@@ -64,3 +64,15 @@ location.reload();
 
 The origin serving the frontend must also be present in
 `ISMP_ALLOWED_ORIGINS` in the edge server `.env`.
+
+## Central control-plane status
+
+`GET /api/v1/health` includes a `central` state and `GET /api/v1/status`
+includes a safe `central` object. Device secrets are never exposed by local
+status endpoints.
+
+When `ISMP_EDGE_ENROLLMENT_SECRET` is configured, the edge service registers
+outbound with the central Node.js API and sends an authenticated heartbeat at
+the configured interval. This control-plane contract is documented in
+`backend/CAMERA_API.md` in the complete repository. Camera streaming remains
+available locally when the central backend is unavailable.
