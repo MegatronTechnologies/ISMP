@@ -173,11 +173,11 @@ const Dashboard = () => {
                 <tbody>
                   {incidents.slice(0, 5).map(inc => (
                     <tr key={inc.id}>
-                      <td>#{inc.id}</td>
-                      <td>{inc.cameraName}</td>
+                      <td className="mono">{inc.id}</td>
+                      <td>{inc.cameraName || t('Camera')}</td>
                       <td><span className="badge threat">{t(inc.detectionType)}</span></td>
                       <td>{new Date(inc.startedAt).toLocaleTimeString(locale)}</td>
-                      <td><span className={`status-badge ${inc.status.toLowerCase()}`}>{t(inc.status)}</span></td>
+                      <td><span className={`status-badge ${(inc.status || 'NEW').toLowerCase()}`}>{t(inc.status || 'NEW')}</span></td>
                     </tr>
                   ))}
                 </tbody>
