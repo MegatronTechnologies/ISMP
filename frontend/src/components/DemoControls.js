@@ -40,12 +40,12 @@ const DemoControls = () => {
   const getRoleShortBadge = (role) => {
     switch (role) {
       case 'SUPERADMIN':
-        return <span className="demo-badge-super">SuperAdmin</span>;
+        return <span className="demo-badge-super">{t('SuperAdmin')}</span>;
       case 'ORGANIZATION_ADMIN':
-        return <span className="demo-badge-org">Org Admin</span>;
+        return <span className="demo-badge-org">{t('Organization Admin')}</span>;
       case 'USER':
       default:
-        return <span className="demo-badge-user">User</span>;
+        return <span className="demo-badge-user">{t('User')}</span>;
     }
   };
 

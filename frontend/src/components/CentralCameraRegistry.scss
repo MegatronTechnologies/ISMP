@@ -450,6 +450,17 @@
         font-size: 0.78rem;
       }
 
+      .card-stale-notice {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1.25rem;
+        background: rgba(107, 114, 128, 0.12);
+        border-top: 1px solid rgba(107, 114, 128, 0.25);
+        color: var(--text-secondary);
+        font-size: 0.78rem;
+      }
+
       .card-expanded-telemetry {
         padding: 1.25rem;
         background: var(--bg-tertiary);

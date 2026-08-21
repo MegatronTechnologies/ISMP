@@ -25,7 +25,7 @@ import { fetchCentralCameras } from '../services/centralCameraApi';
 import { getLocale } from '../utils/dateHelper';
 import './CentralCameraRegistry.scss';
 
-const CentralCameraRegistry = ({ orgFilter = null }) => {
+const CentralCameraRegistry = ({ orgFilter }) => {
   const { t, i18n } = useTranslation();
   const [cameras, setCameras] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -84,9 +84,13 @@ const CentralCameraRegistry = ({ orgFilter = null }) => {
     return date.toLocaleTimeString(locale);
   };
 
-  // Filter cameras
-  const filteredCameras = cameras.filter(cam => {
-    if (orgFilter && cam.organizationId !== orgFilter) return false;
+  // A null filter is explicitly global (SuperAdmin). Missing or mismatched
+  // organization IDs fail closed and never expose the global camera list.
+  const scopedCameras = cameras.filter(cam => (
+    orgFilter === null || String(cam.organizationId) === String(orgFilter)
+  ));
+
+  const filteredCameras = scopedCameras.filter(cam => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
     return (
@@ -97,8 +101,8 @@ const CentralCameraRegistry = ({ orgFilter = null }) => {
     );
   });
 
-  const onlineCount = cameras.filter(c => c.connectionState === 'ONLINE').length;
-  const totalCount = cameras.length;
+  const onlineCount = scopedCameras.filter(c => c.connectionState === 'ONLINE').length;
+  const totalCount = scopedCameras.length;
 
   return (
     <div className="central-camera-registry">
@@ -195,7 +199,7 @@ const CentralCameraRegistry = ({ orgFilter = null }) => {
             </div>
             <ol className="guide-steps">
               <li>
-                <strong>{t('Set enrollment secret')}:</strong> {t('Ensure EDGE_ENROLLMENT_SECRET is configured in backend environment and detector/.env')}
+                <strong>{t('Set enrollment secret')}:</strong> {t('Configure EDGE_ENROLLMENT_SECRET in the backend and ISMP_EDGE_ENROLLMENT_SECRET in detector/.env')}
               </li>
               <li>
                 <strong>{t('Launch edge service')}:</strong> {t('Run the camera server in detector/ using run_windows.ps1 or start_windows.cmd')}
@@ -208,8 +212,21 @@ const CentralCameraRegistry = ({ orgFilter = null }) => {
         </div>
       )}
 
+      {/* Organization-scoped empty state. */}
+      {!loading && !error && cameras.length > 0 && scopedCameras.length === 0 && (
+        <div className="registry-empty-card">
+          <div className="empty-icon-box">
+            <Camera size={36} />
+          </div>
+          <h3>{t('No cameras assigned to this organization')}</h3>
+          <p className="empty-desc">
+            {t('Registered cameras exist, but none are assigned to your organization.')}
+          </p>
+        </div>
+      )}
+
       {/* Camera Cards List */}
-      {!loading && !error && cameras.length > 0 && (
+      {!loading && !error && scopedCameras.length > 0 && (
         <div className="cameras-grid-list">
           {filteredCameras.length === 0 ? (
             <div className="no-filter-match">
@@ -255,7 +272,7 @@ const CentralCameraRegistry = ({ orgFilter = null }) => {
                               <><WifiOff size={11} /> {t('OFFLINE')}</>
                             )}
                           </span>
-                          <span className="scope-pill">{camera.scope || 'LOCAL'}</span>
+                          <span className="scope-pill">{t(camera.scope || 'LOCAL')}</span>
                         </div>
                         <div className="camera-id-row">
                           <code className="camera-id-code" title={camera.id}>{camera.id}</code>
@@ -279,7 +296,7 @@ const CentralCameraRegistry = ({ orgFilter = null }) => {
 
                       <div className="quick-metric-item">
                         <span className="q-label">{t('AI Engine')}</span>
-                        <span className="q-val highlight">{detectorTelemetry.state || 'UNKNOWN'} ({inferenceMs})</span>
+                        <span className="q-val highlight">{t(detectorTelemetry.state || 'UNKNOWN')} ({inferenceMs})</span>
                       </div>
                     </div>
 
@@ -304,6 +321,13 @@ const CentralCameraRegistry = ({ orgFilter = null }) => {
                     </div>
                   </div>
 
+                  {!isOnline && (
+                    <div className="card-stale-notice">
+                      <Clock size={14} />
+                      <span>{t('Camera is offline. Telemetry below is from the last successful heartbeat.')}</span>
+                    </div>
+                  )}
+
                   {/* Safe Error Alert Banner on Card if present */}
                   {safeError && (
                     <div className="card-error-notice">
@@ -320,7 +344,7 @@ const CentralCameraRegistry = ({ orgFilter = null }) => {
                           <h5><Cpu size={14} /> {t('Camera Hardware Status')}</h5>
                           <div className="telemetry-field">
                             <span className="field-label">{t('Hardware State')}:</span>
-                            <span className="field-val">{cameraTelemetry.state || 'UNKNOWN'}</span>
+                            <span className="field-val">{t(cameraTelemetry.state || 'UNKNOWN')}</span>
                           </div>
                           <div className="telemetry-field">
                             <span className="field-label">{t('Video Source')}:</span>
@@ -341,7 +365,7 @@ const CentralCameraRegistry = ({ orgFilter = null }) => {
                           <div className="telemetry-field">
                             <span className="field-label">{t('Detector State')}:</span>
                             <span className={`field-val ${detectorTelemetry.state === 'READY' ? 'text-success' : ''}`}>
-                              {detectorTelemetry.state || 'UNKNOWN'}
+                              {t(detectorTelemetry.state || 'UNKNOWN')}
                             </span>
                           </div>
                           <div className="telemetry-field">
@@ -362,7 +386,7 @@ const CentralCameraRegistry = ({ orgFilter = null }) => {
                           <h5><Tv size={14} /> {t('Stream & Edge Host')}</h5>
                           <div className="telemetry-field">
                             <span className="field-label">{t('Stream State')}:</span>
-                            <span className="field-val">{streamTelemetry.state || 'UNKNOWN'}</span>
+                            <span className="field-val">{t(streamTelemetry.state || 'UNKNOWN')}</span>
                           </div>
                           <div className="telemetry-field">
                             <span className="field-label">{t('Active Clients')}:</span>
