@@ -457,6 +457,7 @@ const resources = {
       "Notifications Granted": "Notifications Granted",
       "Notifications Denied": "Notifications Denied",
       "Notifications Unsupported": "Notifications Unsupported",
+      "Notifications Not Enabled": "Notifications Not Enabled",
       "Emergency Alert Active": "Emergency Alert Active",
       "SOS Emergency Alert": "SOS Emergency Alert",
       "CRITICAL THREAT DETECTED": "CRITICAL THREAT DETECTED",
@@ -469,11 +470,13 @@ const resources = {
       "Active Emergency Alarm": "Active Emergency Alarm",
       "Sound Ready": "Sound Ready",
       "Audio Alarm Running": "Audio Alarm Running",
+      "Enable Alarm Sound": "Enable Alarm Sound",
       "Browser Audio & Notification Settings": "Browser Audio & Notification Settings",
       "Browser Notification Status": "Browser Notification Status",
       "Audio Alarm Status": "Audio Alarm Status",
       "Click to re-verify audio context": "Click to re-verify audio context",
       "Detection Type": "Detection Type",
+      "Detection Time": "Detection Time",
       "Source": "Source"
     }
   },
@@ -932,6 +935,7 @@ const resources = {
       "Notifications Granted": "Bildirişlərə İcazə Verildi",
       "Notifications Denied": "Bildirişlər Rədd Edildi",
       "Notifications Unsupported": "Bildirişlər Dəstəklənmir",
+      "Notifications Not Enabled": "Bildirişlər Aktiv Deyil",
       "Emergency Alert Active": "Fövqəladə Xəbərdarlıq Aktivdir",
       "SOS Emergency Alert": "SOS Fövqəladə Xəbərdarlıq",
       "CRITICAL THREAT DETECTED": "KRİTİK TƏHLÜKƏ AŞKARLANDI",
@@ -944,11 +948,13 @@ const resources = {
       "Active Emergency Alarm": "Aktiv Fövqəladə Siqnal",
       "Sound Ready": "Səs Hazırdır",
       "Audio Alarm Running": "Audio Siqnal Səslənir",
+      "Enable Alarm Sound": "Siqnal Səsini Aktiv Et",
       "Browser Audio & Notification Settings": "Brauzer Audio və Bildiriş Parametrləri",
       "Browser Notification Status": "Brauzer Bildiriş Vəziyyəti",
       "Audio Alarm Status": "Audio Siqnal Vəziyyəti",
       "Click to re-verify audio context": "Audio kontekstini yenidən yoxlamaq üçün klikləyin",
       "Detection Type": "Aşkarlama Növü",
+      "Detection Time": "Aşkarlanma Vaxtı",
       "Source": "Mənbə"
     }
   },
@@ -1406,6 +1412,7 @@ const resources = {
       "Notifications Granted": "Уведомления разрешены",
       "Notifications Denied": "Уведомления отклонены",
       "Notifications Unsupported": "Уведомления не поддерживаются",
+      "Notifications Not Enabled": "Уведомления не включены",
       "Emergency Alert Active": "Экстренное оповещение активно",
       "SOS Emergency Alert": "Экстренное SOS-оповещение",
       "CRITICAL THREAT DETECTED": "ОБНАРУЖЕНА КРИТИЧЕСКАЯ УГРОЗА",
@@ -1418,11 +1425,13 @@ const resources = {
       "Active Emergency Alarm": "Активная экстренная тревога",
       "Sound Ready": "Звук готов",
       "Audio Alarm Running": "Звучит экстренная сирена",
+      "Enable Alarm Sound": "Включить звук тревоги",
       "Browser Audio & Notification Settings": "Настройки звука и уведомлений браузера",
       "Browser Notification Status": "Статус уведомлений браузера",
       "Audio Alarm Status": "Статус аудиосигнала",
       "Click to re-verify audio context": "Нажмите для проверки аудиоконтекста",
       "Detection Type": "Тип обнаружения",
+      "Detection Time": "Время обнаружения",
       "Source": "Источник"
     }
   }

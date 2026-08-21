@@ -6,7 +6,10 @@ const STORAGE_KEY_ARMED = 'ismp_sos_armed';
 const getInitialHandledIds = () => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_HANDLED);
-    return raw ? JSON.parse(raw) : [];
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((id) => typeof id === 'string').slice(-200)
+      : [];
   } catch (_err) {
     return [];
   }
@@ -61,20 +64,22 @@ const emergencySlice = createSlice({
         timestamp: incident.startedAt || incident.createdAt || new Date().toISOString(),
         source: incident.source || 'YOLO_EDGE',
       };
-      state.isAlarmPlaying = true;
+      // The Web Audio service reports the real playback result separately.
+      state.isAlarmPlaying = false;
       state.isOverlayOpen = true;
       state.isBannerActive = true;
-
-      if (!state.handledIncidentIds.includes(incident.id)) {
-        state.handledIncidentIds.push(incident.id);
-        saveHandledIds(state.handledIncidentIds);
-      }
     },
     dismissOverlay: (state) => {
       state.isOverlayOpen = false;
       // Note: isBannerActive and isAlarmPlaying remain true until stopEmergencyAlert
     },
     stopEmergencyAlert: (state) => {
+      const incidentId = state.activeAlert?.id;
+      if (incidentId && !state.handledIncidentIds.includes(incidentId)) {
+        state.handledIncidentIds.push(incidentId);
+        state.handledIncidentIds = state.handledIncidentIds.slice(-200);
+        saveHandledIds(state.handledIncidentIds);
+      }
       state.isAlarmPlaying = false;
       state.isOverlayOpen = false;
       state.isBannerActive = false;
@@ -86,6 +91,9 @@ const emergencySlice = createSlice({
     },
     setSoundReady: (state, action) => {
       state.soundReady = !!action.payload;
+    },
+    setAlarmPlaying: (state, action) => {
+      state.isAlarmPlaying = !!action.payload;
     },
     setNotificationPermission: (state, action) => {
       state.notificationPermission = action.payload;
@@ -106,6 +114,7 @@ export const {
   stopEmergencyAlert,
   setArmed,
   setSoundReady,
+  setAlarmPlaying,
   setNotificationPermission,
   markIncidentHandled,
 } = emergencySlice.actions;

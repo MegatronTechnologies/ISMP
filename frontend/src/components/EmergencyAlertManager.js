@@ -11,9 +11,6 @@ import {
   Video,
   AlertTriangle,
   CheckCircle2,
-  ExternalLink,
-  Shield,
-  Info,
 } from 'lucide-react';
 import {
   startSosAlarm,
@@ -32,6 +29,7 @@ import {
   stopEmergencyAlert,
   setArmed,
   setSoundReady,
+  setAlarmPlaying,
   setNotificationPermission,
 } from '../redux/slices/emergencySlice';
 import './EmergencyAlertManager.scss';
@@ -40,7 +38,12 @@ export const EmergencyArmingBanner = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const { isAuthenticated } = useSelector((state) => state.auth);
-  const { isArmed, soundReady, notificationPermission } = useSelector(
+  const {
+    activeAlert,
+    isArmed,
+    soundReady,
+    notificationPermission,
+  } = useSelector(
     (state) => state.emergency
   );
   const [isArming, setIsArming] = useState(false);
@@ -56,6 +59,10 @@ export const EmergencyArmingBanner = () => {
       const audioReady = await initAudioContext();
       dispatch(setSoundReady(audioReady));
       dispatch(setArmed(true));
+      if (audioReady && activeAlert) {
+        const started = await startSosAlarm();
+        dispatch(setAlarmPlaying(started));
+      }
     } catch (err) {
       console.warn('Error arming emergency alert:', err);
     } finally {
@@ -66,6 +73,13 @@ export const EmergencyArmingBanner = () => {
   if (!isAuthenticated) return null;
 
   const isSoundActive = soundReady || isAudioArmed();
+  const notificationLabel = notificationPermission === 'granted'
+    ? t('Notifications Granted')
+    : notificationPermission === 'denied'
+      ? t('Notifications Denied')
+      : notificationPermission === 'unsupported'
+        ? t('Notifications Unsupported')
+        : t('Notifications Not Enabled');
 
   return (
     <div
@@ -86,11 +100,7 @@ export const EmergencyArmingBanner = () => {
                 title={t('Browser Notification Status')}
               >
                 <Bell size={12} />
-                {notificationPermission === 'granted'
-                  ? t('Notifications Granted')
-                  : notificationPermission === 'denied'
-                  ? t('Notifications Denied')
-                  : t('Notifications Unsupported')}
+                {notificationLabel}
               </span>
 
               {/* Sound Status Badge */}
@@ -149,7 +159,11 @@ const EmergencyAlertManager = () => {
   const location = useLocation();
 
   const { isAuthenticated } = useSelector((state) => state.auth);
-  const incidents = useSelector((state) => state.incidents.incidents);
+  const {
+    realIncidents,
+    simulatedIncidents,
+    lastSyncedAt,
+  } = useSelector((state) => state.incidents);
   const {
     activeAlert,
     isAlarmPlaying,
@@ -159,8 +173,10 @@ const EmergencyAlertManager = () => {
     handledIncidentIds,
   } = useSelector((state) => state.emergency);
 
-  const knownIncidentIdsRef = useRef(new Set());
-  const isInitializedRef = useRef(false);
+  const knownRealIncidentIdsRef = useRef(new Set());
+  const knownSimulatedIncidentIdsRef = useRef(new Set());
+  const realBaselineReadyRef = useRef(false);
+  const simulatedBaselineReadyRef = useRef(false);
   const liveButtonRef = useRef(null);
 
   // Sync current notification permission on mount
@@ -170,73 +186,119 @@ const EmergencyAlertManager = () => {
     dispatch(setSoundReady(isAudioArmed()));
   }, [dispatch]);
 
-  // Track initial state and handle detection of genuinely new incidents
-  useEffect(() => {
-    if (!incidents || !Array.isArray(incidents)) return;
+  const presentEmergencyAlert = useCallback((incident) => {
+    dispatch(triggerAlert(incident));
 
-    // First load: populate existing IDs without triggering alarms
-    if (!isInitializedRef.current) {
-      incidents.forEach((inc) => {
-        if (inc && inc.id) knownIncidentIdsRef.current.add(inc.id);
+    if (isArmed || isAudioArmed()) {
+      startSosAlarm().then((started) => {
+        dispatch(setAlarmPlaying(started));
+        if (started) dispatch(setSoundReady(true));
       });
-      handledIncidentIds.forEach((id) => {
-        if (id) knownIncidentIdsRef.current.add(id);
-      });
-      isInitializedRef.current = true;
+    } else {
+      dispatch(setAlarmPlaying(false));
+    }
+
+    const cameraLabel = incident.cameraName || incident.cameraId || t('Camera');
+    const detectionKey = incident.detectionType || incident.label || 'Threat Detected';
+    const detectionLabel = t(detectionKey);
+    const confPct = incident.confidence !== undefined
+      ? Math.round(Number(incident.confidence) * 100)
+      : 90;
+
+    showSystemSosNotification({
+      title: t('SOS — Threat Detected'),
+      body: t('{{label}} detected on {{camera}} · Confidence {{confidence}}%', {
+        label: detectionLabel,
+        camera: cameraLabel,
+        confidence: confPct,
+      }),
+      incidentId: incident.id,
+      onClick: () => {
+        navigate('/live-monitoring');
+        dispatch(dismissOverlay());
+      },
+    });
+  }, [dispatch, isArmed, navigate, t]);
+
+  // The first successful central sync establishes a baseline. Existing server
+  // incidents must never look like fresh emergencies after login or reload.
+  useEffect(() => {
+    const currentRealIncidents = Array.isArray(realIncidents) ? realIncidents : [];
+
+    if (!isAuthenticated) {
+      knownRealIncidentIdsRef.current = new Set(
+        currentRealIncidents.filter((incident) => incident?.id).map((incident) => incident.id)
+      );
+      realBaselineReadyRef.current = false;
       return;
     }
 
-    // Subsequent updates: check for new unhandled incident
-    const newCandidate = incidents.find(
-      (inc) =>
-        inc &&
-        inc.id &&
-        !knownIncidentIdsRef.current.has(inc.id) &&
-        !handledIncidentIds.includes(inc.id) &&
-        (inc.status === 'NEW' || inc.source === 'YOLO_EDGE' || inc.source === 'SIMULATED')
-    );
+    if (!lastSyncedAt) return;
 
-    // Keep known IDs updated to prevent retriggering during polling
-    incidents.forEach((inc) => {
-      if (inc && inc.id) knownIncidentIdsRef.current.add(inc.id);
+    if (!realBaselineReadyRef.current) {
+      currentRealIncidents.forEach((incident) => {
+        if (incident?.id) knownRealIncidentIdsRef.current.add(incident.id);
+      });
+      handledIncidentIds.forEach((id) => knownRealIncidentIdsRef.current.add(id));
+      realBaselineReadyRef.current = true;
+      return;
+    }
+
+    const newCandidate = currentRealIncidents.find((incident) => (
+      incident?.id
+      && incident.status === 'NEW'
+      && !knownRealIncidentIdsRef.current.has(incident.id)
+      && !handledIncidentIds.includes(incident.id)
+    ));
+
+    currentRealIncidents.forEach((incident) => {
+      if (incident?.id) knownRealIncidentIdsRef.current.add(incident.id);
     });
 
-    if (newCandidate) {
-      knownIncidentIdsRef.current.add(newCandidate.id);
+    if (newCandidate) presentEmergencyAlert(newCandidate);
+  }, [
+    handledIncidentIds,
+    isAuthenticated,
+    lastSyncedAt,
+    presentEmergencyAlert,
+    realIncidents,
+  ]);
 
-      // Trigger Redux emergency state
-      dispatch(triggerAlert(newCandidate));
+  // Simulated incidents are tracked independently so the existing Demo
+  // Controls can exercise the same SOS workflow without a physical object.
+  useEffect(() => {
+    const currentSimulatedIncidents = Array.isArray(simulatedIncidents)
+      ? simulatedIncidents
+      : [];
 
-      // Start Web Audio Morse Code SOS Alarm
-      startSosAlarm().then((started) => {
-        if (started) {
-          dispatch(setSoundReady(true));
-        }
-      });
-
-      // Dispatch Native System Notification
-      const cameraLabel = newCandidate.cameraName || newCandidate.cameraId || 'Camera';
-      const detectionLabel = newCandidate.detectionType || newCandidate.label || 'Threat';
-      const confPct =
-        newCandidate.confidence !== undefined
-          ? Math.round(Number(newCandidate.confidence) * 100)
-          : 90;
-
-      showSystemSosNotification({
-        title: t('SOS — Threat Detected'),
-        body: t('{{label}} detected on {{camera}} · Confidence {{confidence}}%', {
-          label: detectionLabel,
-          camera: cameraLabel,
-          confidence: confPct,
-        }),
-        incidentId: newCandidate.id,
-        onClick: () => {
-          navigate('/live-monitoring');
-          dispatch(dismissOverlay());
-        },
-      });
+    if (!simulatedBaselineReadyRef.current || !isAuthenticated) {
+      knownSimulatedIncidentIdsRef.current = new Set(
+        currentSimulatedIncidents
+          .filter((incident) => incident?.id)
+          .map((incident) => incident.id)
+      );
+      simulatedBaselineReadyRef.current = isAuthenticated;
+      return;
     }
-  }, [incidents, handledIncidentIds, dispatch, navigate, t]);
+
+    const newCandidate = currentSimulatedIncidents.find((incident) => (
+      incident?.id
+      && incident.status === 'NEW'
+      && !knownSimulatedIncidentIdsRef.current.has(incident.id)
+      && !handledIncidentIds.includes(incident.id)
+    ));
+
+    currentSimulatedIncidents.forEach((incident) => {
+      if (incident?.id) knownSimulatedIncidentIdsRef.current.add(incident.id);
+    });
+
+    if (newCandidate) presentEmergencyAlert(newCandidate);
+  }, [
+    handledIncidentIds,
+    isAuthenticated,
+    presentEmergencyAlert,
+    simulatedIncidents,
+  ]);
 
   // Focus management when overlay opens
   useEffect(() => {
@@ -258,6 +320,21 @@ const EmergencyAlertManager = () => {
     return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [handleKeyDown]);
 
+  useEffect(() => {
+    if (isAuthenticated) return;
+    stopSosAlarm();
+    if (activeAlert || isAlarmPlaying || isOverlayOpen || isBannerActive) {
+      dispatch(stopEmergencyAlert());
+    }
+  }, [
+    activeAlert,
+    dispatch,
+    isAlarmPlaying,
+    isAuthenticated,
+    isBannerActive,
+    isOverlayOpen,
+  ]);
+
   const handleOpenLiveMonitoring = () => {
     dispatch(dismissOverlay());
     navigate('/live-monitoring');
@@ -266,6 +343,18 @@ const EmergencyAlertManager = () => {
   const handleStopAlarm = () => {
     stopSosAlarm();
     dispatch(stopEmergencyAlert());
+  };
+
+  const handleEnableAlarmSound = async () => {
+    const ready = await initAudioContext();
+    dispatch(setSoundReady(ready));
+    dispatch(setArmed(true));
+    if (!ready || !activeAlert) {
+      dispatch(setAlarmPlaying(false));
+      return;
+    }
+    const started = await startSosAlarm();
+    dispatch(setAlarmPlaying(started));
   };
 
   const formatTimestamp = (timestamp) => {
@@ -294,7 +383,7 @@ const EmergencyAlertManager = () => {
             <Radio size={20} className="banner-pulse-icon" />
             <div className="banner-text">
               <span className="banner-title">
-                {t('Emergency Alert Active')}: {activeAlert.detectionType}
+                {t('Emergency Alert Active')}: {t(activeAlert.detectionType)}
               </span>
               <span className="banner-subtitle">
                 {activeAlert.cameraName} ({activeAlert.id})
@@ -374,7 +463,7 @@ const EmergencyAlertManager = () => {
                 <div className="sos-detail-item">
                   <span className="label">{t('Detection Type')}</span>
                   <span className="value highlight-red">
-                    {activeAlert.detectionType}
+                    {t(activeAlert.detectionType)}
                   </span>
                 </div>
 
@@ -408,11 +497,21 @@ const EmergencyAlertManager = () => {
               </div>
 
               {/* Audio Pulse Bar */}
-              <div className="sos-audio-indicator">
-                <div className="audio-pulse-dot" />
-                <Volume2 size={16} />
-                <span>{t('Audio Alarm Running')} — SOS (··· ——— ···)</span>
-              </div>
+              {isAlarmPlaying ? (
+                <div className="sos-audio-indicator">
+                  <div className="audio-pulse-dot" />
+                  <Volume2 size={16} />
+                  <span>{t('Audio Alarm Running')} — SOS (··· ——— ···)</span>
+                </div>
+              ) : (
+                <div className="sos-audio-indicator sound-blocked">
+                  <VolumeX size={16} />
+                  <span>{t('Sound Requires Activation')}</span>
+                  <button type="button" onClick={handleEnableAlarmSound}>
+                    {t('Enable Alarm Sound')}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Actions */}
