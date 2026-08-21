@@ -24,7 +24,8 @@ const Login = () => {
         name: displayName || 'Demo User',
         email: email || 'user@ismp.az',
         role: 'USER',
-        organization: 'Baku Secondary School #23'
+        organization: 'Baku Secondary School #23',
+        organizationId: '1'
       },
       token: 'mock-jwt-token-demo'
     }));
@@ -38,7 +39,8 @@ const Login = () => {
         name: 'Demo Operator',
         email: 'user@ismp.az',
         role: 'USER',
-        organization: 'Baku Secondary School #23'
+        organization: 'Baku Secondary School #23',
+        organizationId: '1'
       },
       token: 'mock-jwt-token-demo-user'
     }));
@@ -51,7 +53,8 @@ const Login = () => {
         name: 'Leyla Qurbanova',
         email: 'admin@school23.edu.az',
         role: 'ORGANIZATION_ADMIN',
-        organization: 'Baku Secondary School #23'
+        organization: 'Baku Secondary School #23',
+        organizationId: '1'
       },
       token: 'mock-jwt-token-demo-org'
     }));
@@ -64,7 +67,8 @@ const Login = () => {
         name: 'Aydın Sulxayev',
         email: 'superadmin@ismp.az',
         role: 'SUPERADMIN',
-        organization: 'ISMP Central Administration'
+        organization: 'ISMP Central Administration',
+        organizationId: '1'
       },
       token: 'mock-jwt-token-demo-super'
     }));
