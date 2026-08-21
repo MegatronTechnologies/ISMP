@@ -7,7 +7,7 @@ ISMP transforms passive CCTV monitoring into an active AI-assisted incident-mana
 - **Backend:** Node.js, Express.js
 - **Databases:** MySQL (business logic), MongoDB (telemetry), Redis (caching, live states)
 - **Realtime:** Socket.IO / WebSockets
-- **Edge Service (Future):** Python + YOLOv8 + OpenCV
+- **Edge Service:** Standalone Python + YOLOv8 + OpenCV camera server in [`detector/`](detector/README.md)
 
 ## Setup and Installation
 
@@ -44,6 +44,16 @@ JWT_SECRET=your_jwt_secret
    ```
 3. The application will be accessible at `http://localhost:3000/`.
 
+### Running the standalone camera server
+
+The camera/YOLO service is intentionally isolated from the website code. It can
+be downloaded and installed on a Windows camera laptop using only the
+`detector` folder. See the [edge-server instructions](detector/README.md) or the
+[Russian instructions](detector/README.ru.md).
+
+Team members should use separate feature branches and the path ownership rules
+in [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Simulated vs Real Features
 
 **Currently Implemented:**
@@ -55,9 +65,10 @@ JWT_SECRET=your_jwt_secret
 - **Strict Simulation Workflow:** The "Simulate Threat" feature triggers a full mocked workflow (Incident creation, Notification dispatch, Audit Logging, and Dashboard statistics updates) using strict Redux Thunks. Workflows enforce real-world RBAC progression (NEW -> ACKNOWLEDGED -> RESOLVED).
 - **Role-Based Access Control:** Frontend routes are protected by `ProtectedRoute` and `RoleGuard` components, simulating USER, ORGANIZATION_ADMIN, and SUPERADMIN access levels.
 - **Advanced Dashboard:** Accurate 24h event calculations and dynamic response times based on incident historical timestamps.
+- **Real Edge Stream MVP:** A standalone Windows camera service publishes YOLOv8-annotated MJPEG, health, status, and detection telemetry to Live Monitoring. Stage 1 targets bottles only and does not create incidents.
 
 **Future Features (Not Yet Implemented):**
-- **Real AI Integration:** Python + YOLOv8 + OpenCV edge service for actual threat detection.
+- **Custom Weapon Model:** Replace the temporary bottle-only YOLOv8 model with the trained weapon model.
 - **Real Database Integration:** Connecting the existing repository interfaces to live MySQL, MongoDB, and Redis instances.
-- **Live Video Streaming:** Replacing the CSS grid/placeholder with an actual WebRTC/HLS video stream from edge cameras.
+- **Authenticated Remote Video Relay:** Move beyond the same-laptop MJPEG MVP with protected WebRTC/HLS transport for remote cameras.
 - **Real-Time WebSockets:** Replacing Redux simulations with live Socket.IO events pushed from the server.
