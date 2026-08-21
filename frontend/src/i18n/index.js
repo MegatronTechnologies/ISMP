@@ -436,7 +436,17 @@ const resources = {
       "Organization Admins": "Organization Admins",
       "Organizations": "Organizations",
       "Settings": "Settings",
-      "Trash": "Trash"
+      "Trash": "Trash",
+      "Incident Video Replay": "Incident video replay",
+      "Your browser cannot play this incident recording.": "Your browser cannot play this incident recording.",
+      "Duration": "Duration",
+      "Video Frames": "Video frames",
+      "Recorded incident video is unavailable. Showing captured photos instead.": "Recorded incident video is unavailable. Showing captured photos instead.",
+      "Open Frame {{number}}": "Open frame {{number}}",
+      "Expanded Evidence Frame": "Expanded evidence frame",
+      "Close image viewer": "Close image viewer",
+      "Expanded evidence frame {{number}}": "Expanded evidence frame {{number}}",
+      "Video ready": "Video ready"
     }
   },
   az: {
@@ -873,7 +883,17 @@ const resources = {
       "Organization Admins": "Təşkilat administratorları",
       "Organizations": "Təşkilatlar",
       "Settings": "Parametrlər",
-      "Trash": "Səbət"
+      "Trash": "Səbət",
+      "Incident Video Replay": "İnsident videosunun təkrarı",
+      "Your browser cannot play this incident recording.": "Brauzeriniz bu insident videosunu oynada bilmir.",
+      "Duration": "Müddət",
+      "Video Frames": "Video kadrları",
+      "Recorded incident video is unavailable. Showing captured photos instead.": "İnsident videosu əlçatan deyil. Əvəzinə çəkilmiş fotolar göstərilir.",
+      "Open Frame {{number}}": "{{number}} nömrəli kadrı aç",
+      "Expanded Evidence Frame": "Böyüdülmüş sübut kadrı",
+      "Close image viewer": "Şəkil baxışını bağla",
+      "Expanded evidence frame {{number}}": "Böyüdülmüş sübut kadrı {{number}}",
+      "Video ready": "Video hazırdır"
     }
   },
   ru: {
@@ -1309,7 +1329,17 @@ const resources = {
       "Organization Admins": "Администраторы организаций",
       "Organizations": "Организации",
       "Settings": "Настройки",
-      "Trash": "Корзина"
+      "Trash": "Корзина",
+      "Incident Video Replay": "Видеоповтор инцидента",
+      "Your browser cannot play this incident recording.": "Ваш браузер не может воспроизвести запись этого инцидента.",
+      "Duration": "Длительность",
+      "Video Frames": "Кадры видео",
+      "Recorded incident video is unavailable. Showing captured photos instead.": "Запись инцидента недоступна. Вместо неё показаны сохранённые фотографии.",
+      "Open Frame {{number}}": "Открыть кадр {{number}}",
+      "Expanded Evidence Frame": "Увеличенный кадр доказательства",
+      "Close image viewer": "Закрыть просмотр изображения",
+      "Expanded evidence frame {{number}}": "Увеличенный кадр доказательства {{number}}",
+      "Video ready": "Видео готово"
     }
   }
 };

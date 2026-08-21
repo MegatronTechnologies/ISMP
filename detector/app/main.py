@@ -18,7 +18,7 @@ from .yolo_detector import YoloDetector
 detector = YoloDetector(settings)
 stream_service = CameraStreamService(settings, detector)
 control_client = EdgeControlClient(settings, stream_service.status, edge_version=__version__)
-stream_service.set_incident_sink(control_client.submit_detection_evidence)
+stream_service.set_incident_sink(control_client.submit_incident_payload)
 
 
 @asynccontextmanager
@@ -26,8 +26,8 @@ async def lifespan(_: FastAPI):
     stream_service.start()
     control_client.start()
     yield
-    control_client.stop()
     stream_service.stop()
+    control_client.stop()
 
 
 app = FastAPI(

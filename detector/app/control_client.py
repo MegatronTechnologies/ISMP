@@ -6,6 +6,7 @@ import os
 import platform
 import queue
 import threading
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
@@ -54,6 +55,7 @@ class EdgeControlClient:
         self._last_success_at: str | None = None
         self._consecutive_failures = 0
         self._delivered_incident_evidence = 0
+        self._delivered_incident_recordings = 0
         self._dropped_incident_evidence = 0
         self._last_incident_success_at: str | None = None
         self._last_incident_error: str | None = None
@@ -87,6 +89,9 @@ class EdgeControlClient:
         self._event_thread.start()
 
     def stop(self) -> None:
+        delivery_deadline = time.monotonic() + max(10, self.settings.central_timeout_seconds + 5)
+        while self._event_queue.unfinished_tasks and time.monotonic() < delivery_deadline:
+            time.sleep(0.05)
         self._stop_event.set()
         if self._thread:
             self._thread.join(timeout=self.settings.central_timeout_seconds + 2)
@@ -138,14 +143,14 @@ class EdgeControlClient:
             self._last_success_at = response.get("camera", {}).get("lastHeartbeatAt") or _utc_now()
             self._consecutive_failures = 0
 
-    def submit_detection_evidence(self, evidence: dict[str, Any]) -> bool:
+    def submit_incident_payload(self, payload: dict[str, Any]) -> bool:
         if not self.enabled:
             with self._lock:
                 self._dropped_incident_evidence += 1
                 self._last_incident_error = "Central enrollment is not configured"
             return False
         try:
-            self._event_queue.put_nowait(evidence)
+            self._event_queue.put_nowait(payload)
             return True
         except queue.Full:
             with self._lock:
@@ -153,10 +158,13 @@ class EdgeControlClient:
                 self._last_incident_error = "Incident delivery queue is full"
             return False
 
+    def submit_detection_evidence(self, evidence: dict[str, Any]) -> bool:
+        return self.submit_incident_payload(evidence)
+
     def _event_loop(self) -> None:
         while not self._stop_event.is_set():
             try:
-                evidence = self._event_queue.get(timeout=0.5)
+                payload = self._event_queue.get(timeout=0.5)
             except queue.Empty:
                 continue
 
@@ -165,10 +173,13 @@ class EdgeControlClient:
                 if self._stop_event.is_set():
                     break
                 try:
-                    self._deliver_detection_evidence(evidence)
+                    self._deliver_incident_payload(payload)
                     delivered = True
                     with self._lock:
-                        self._delivered_incident_evidence += 1
+                        if payload.get("kind") == "recording":
+                            self._delivered_incident_recordings += 1
+                        else:
+                            self._delivered_incident_evidence += 1
                         self._last_incident_success_at = _utc_now()
                         self._last_incident_error = None
                     break
@@ -188,12 +199,26 @@ class EdgeControlClient:
                     self._dropped_incident_evidence += 1
             self._event_queue.task_done()
 
-    def _deliver_detection_evidence(self, evidence: dict[str, Any]) -> dict[str, Any]:
-        camera_id, device_token = self._device_credentials()
-        detection = evidence["detection"]
+    def _deliver_incident_payload(self, payload: dict[str, Any]) -> dict[str, Any]:
+        if payload.get("kind") == "recording":
+            return self._deliver_incident_recording(payload)
+        return self._deliver_detection_evidence(payload)
+
+    @staticmethod
+    def _detection_headers(detection: dict[str, Any]) -> dict[str, str]:
         encoded_label = base64.urlsafe_b64encode(
             str(detection["label"]).encode("utf-8")
         ).decode("ascii").rstrip("=")
+        return {
+            "X-ISMP-Detection-Class-ID": str(detection["classId"]),
+            "X-ISMP-Detection-Label-B64": encoded_label,
+            "X-ISMP-Detection-Confidence": str(detection["confidence"]),
+            "X-ISMP-Detection-Box": json.dumps(detection["box"], separators=(",", ":")),
+        }
+
+    def _deliver_detection_evidence(self, evidence: dict[str, Any]) -> dict[str, Any]:
+        camera_id, device_token = self._device_credentials()
+        detection = evidence["detection"]
         path = (
             f"/edge/cameras/{quote(camera_id, safe='')}/detection-events/"
             f"{quote(str(evidence['eventId']), safe='')}/evidence"
@@ -203,14 +228,39 @@ class EdgeControlClient:
             "Content-Type": "image/jpeg",
             "X-ISMP-Capture-ID": str(evidence["captureId"]),
             "X-ISMP-Captured-At": str(evidence["capturedAt"]),
-            "X-ISMP-Detection-Class-ID": str(detection["classId"]),
-            "X-ISMP-Detection-Label-B64": encoded_label,
-            "X-ISMP-Detection-Confidence": str(detection["confidence"]),
-            "X-ISMP-Detection-Box": json.dumps(detection["box"], separators=(",", ":")),
             "X-ISMP-Detection-Present": "true" if evidence.get("detectionPresent", True) else "false",
+            **self._detection_headers(detection),
         }
         try:
             return self._post_jpeg(path, evidence["jpeg"], headers)
+        except EdgeApiError as exc:
+            if exc.status_code in {401, 404}:
+                self._invalidate_device_token(device_token)
+            raise
+
+    def _deliver_incident_recording(self, recording: dict[str, Any]) -> dict[str, Any]:
+        camera_id, device_token = self._device_credentials()
+        path = (
+            f"/edge/cameras/{quote(camera_id, safe='')}/detection-events/"
+            f"{quote(str(recording['eventId']), safe='')}/recording"
+        )
+        headers = {
+            "Authorization": f"Bearer {device_token}",
+            "Content-Type": str(recording.get("contentType") or "video/webm"),
+            "X-ISMP-Recording-ID": str(recording["recordingId"]),
+            "X-ISMP-Recording-Started-At": str(recording["startedAt"]),
+            "X-ISMP-Recording-Ended-At": str(recording["endedAt"]),
+            "X-ISMP-Recording-Duration-Seconds": str(recording["durationSeconds"]),
+            "X-ISMP-Recording-Frame-Count": str(recording["frameCount"]),
+            **self._detection_headers(recording["detection"]),
+        }
+        try:
+            return self._post_binary(
+                path,
+                recording["video"],
+                headers,
+                timeout=max(30, self.settings.central_timeout_seconds),
+            )
         except EdgeApiError as exc:
             if exc.status_code in {401, 404}:
                 self._invalidate_device_token(device_token)
@@ -319,14 +369,26 @@ class EdgeControlClient:
         jpeg: bytes,
         headers: dict[str, str],
     ) -> dict[str, Any]:
+        return self._post_binary(path, jpeg, headers)
+
+    def _post_binary(
+        self,
+        path: str,
+        body: bytes,
+        headers: dict[str, str],
+        timeout: float | None = None,
+    ) -> dict[str, Any]:
         request = Request(
             f"{self.settings.central_api_url}{path}",
-            data=jpeg,
+            data=body,
             method="POST",
             headers=headers,
         )
         try:
-            with urlopen(request, timeout=self.settings.central_timeout_seconds) as response:
+            with urlopen(
+                request,
+                timeout=timeout or self.settings.central_timeout_seconds,
+            ) as response:
                 return json.loads(response.read().decode("utf-8"))
         except HTTPError as exc:
             try:
@@ -354,6 +416,7 @@ class EdgeControlClient:
                 "incidentDelivery": {
                     "pendingEvidence": self._event_queue.qsize(),
                     "deliveredEvidence": self._delivered_incident_evidence,
+                    "deliveredRecordings": self._delivered_incident_recordings,
                     "droppedEvidence": self._dropped_incident_evidence,
                     "lastSuccessAt": self._last_incident_success_at,
                     "error": self._last_incident_error,

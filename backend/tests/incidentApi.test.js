@@ -9,6 +9,7 @@ const express = require('express');
 const apiRoutes = require('../routes/api');
 
 const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xd9]);
+const webm = Buffer.from([0x1a, 0x45, 0xdf, 0xa3, 0x01, 0x02, 0x03, 0x04]);
 
 const requestHeaders = (token, captureId) => ({
   Authorization: `Bearer ${token}`,
@@ -20,6 +21,20 @@ const requestHeaders = (token, captureId) => ({
   'X-ISMP-Detection-Confidence': '0.94',
   'X-ISMP-Detection-Box': '[10,20,110,220]',
   'X-ISMP-Detection-Present': 'true',
+});
+
+const recordingHeaders = token => ({
+  Authorization: `Bearer ${token}`,
+  'Content-Type': 'video/webm',
+  'X-ISMP-Recording-ID': 'recording-api-test',
+  'X-ISMP-Recording-Started-At': '2026-08-21T12:00:00.000Z',
+  'X-ISMP-Recording-Ended-At': '2026-08-21T12:00:05.000Z',
+  'X-ISMP-Recording-Duration-Seconds': '5',
+  'X-ISMP-Recording-Frame-Count': '50',
+  'X-ISMP-Detection-Class-ID': '39',
+  'X-ISMP-Detection-Label-B64': Buffer.from('bottle').toString('base64url'),
+  'X-ISMP-Detection-Confidence': '0.94',
+  'X-ISMP-Detection-Box': '[10,20,110,220]',
 });
 
 test('edge HTTP contract creates an incident and serves its evidence', async () => {
@@ -64,6 +79,27 @@ test('edge HTTP contract creates an incident and serves its evidence', async () 
     assert.equal(evidence.status, 200);
     assert.equal(evidence.headers.get('content-type'), 'image/jpeg');
     assert.deepEqual(Buffer.from(await evidence.arrayBuffer()), jpeg);
+
+    const recordingUpload = await fetch(
+      `${baseUrl}/edge/cameras/cam-api-test/detection-events/event-api-test/recording`,
+      {
+        method: 'POST',
+        headers: recordingHeaders(credentials.deviceToken),
+        body: webm,
+      },
+    );
+    assert.equal(recordingUpload.status, 200);
+    const withRecording = await recordingUpload.json();
+    assert.equal(withRecording.incident.recording.frameCount, 50);
+
+    const recording = await fetch(
+      `http://127.0.0.1:${address.port}${withRecording.incident.recording.url}`,
+      { headers: { Range: 'bytes=0-3' } },
+    );
+    assert.equal(recording.status, 206);
+    assert.equal(recording.headers.get('content-type'), 'video/webm');
+    assert.equal(recording.headers.get('content-range'), `bytes 0-3/${webm.length}`);
+    assert.deepEqual(Buffer.from(await recording.arrayBuffer()), webm.subarray(0, 4));
 
     const notifications = await (await fetch(`${baseUrl}/notifications`)).json();
     assert.equal(notifications.length, 1);

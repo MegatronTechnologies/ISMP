@@ -69,6 +69,16 @@ class EvidenceControlClient(FakeControlClient):
         return {"accepted": True}
 
 
+class RecordingControlClient(FakeControlClient):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.binary_calls = []
+
+    def _post_binary(self, path, body, headers, timeout=None):
+        self.binary_calls.append((path, body, headers, timeout))
+        return {"accepted": True}
+
+
 class ControlClientTests(unittest.TestCase):
     def make_settings(self, identity_file):
         return Settings(
@@ -210,6 +220,50 @@ class ControlClientTests(unittest.TestCase):
                 "bottle",
             )
             self.assertEqual(client.status()["incidentDelivery"]["pendingEvidence"], 0)
+
+    def test_completed_recording_uses_the_same_event_and_device_credentials(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_file = Path(temp_dir) / ".device.json"
+            identity_file.write_text(
+                json.dumps({"cameraId": "cam-test-1", "deviceToken": "saved-token"}),
+                encoding="utf-8",
+            )
+            client = RecordingControlClient(
+                self.make_settings(identity_file),
+                edge_status,
+                edge_version="0.4.0",
+            )
+            recording = {
+                "kind": "recording",
+                "eventId": "event-test-1",
+                "recordingId": "recording-test-1",
+                "startedAt": "2026-08-21T12:00:00+00:00",
+                "endedAt": "2026-08-21T12:00:05+00:00",
+                "durationSeconds": 5,
+                "frameCount": 50,
+                "contentType": "video/webm",
+                "detection": {
+                    "classId": 39,
+                    "label": "bottle",
+                    "confidence": 0.94,
+                    "box": [10, 20, 110, 220],
+                },
+                "video": b"webm-bytes",
+            }
+
+            client._deliver_incident_recording(recording)
+
+            self.assertEqual(len(client.binary_calls), 1)
+            path, body, headers, timeout = client.binary_calls[0]
+            self.assertEqual(
+                path,
+                "/edge/cameras/cam-test-1/detection-events/event-test-1/recording",
+            )
+            self.assertEqual(body, b"webm-bytes")
+            self.assertEqual(headers["Authorization"], "Bearer saved-token")
+            self.assertEqual(headers["Content-Type"], "video/webm")
+            self.assertEqual(headers["X-ISMP-Recording-Frame-Count"], "50")
+            self.assertGreaterEqual(timeout, 30)
 
 
 if __name__ == "__main__":

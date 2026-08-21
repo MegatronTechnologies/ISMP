@@ -3,6 +3,7 @@ class MockIncidentRepository {
     this.incidents = seedData.map(incident => ({
       ...incident,
       evidence: [...(incident.evidence || [])],
+      recording: incident.recording ? { ...incident.recording } : null,
     }));
   }
 
@@ -21,9 +22,21 @@ class MockIncidentRepository {
   }
 
   async create(data) {
-    const newIncident = { ...data, evidence: [...(data.evidence || [])] };
+    const newIncident = {
+      ...data,
+      evidence: [...(data.evidence || [])],
+      recording: data.recording ? { ...data.recording } : null,
+    };
     this.incidents.unshift(newIncident);
     return newIncident;
+  }
+
+  async setRecording(id, recording, updatedAt) {
+    const incident = await this.findById(id);
+    if (!incident) return null;
+    incident.recording = { ...recording };
+    incident.updatedAt = updatedAt;
+    return incident;
   }
 
   async appendEvidence(id, evidence, updatedAt) {

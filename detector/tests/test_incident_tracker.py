@@ -23,7 +23,8 @@ class IncidentTrackerTests(unittest.TestCase):
             "incident_confirm_window_seconds": 2,
             "incident_rearm_absence_seconds": 3,
             "incident_cooldown_seconds": 30,
-            "incident_snapshot_offsets_seconds": (0, 1, 2),
+            "incident_snapshot_interval_seconds": 1,
+            "incident_max_snapshots": 60,
         }
         values.update(overrides)
         settings = Settings(**values)
@@ -56,10 +57,26 @@ class IncidentTrackerTests(unittest.TestCase):
         third = self.observe(tracker, 2.41)
 
         self.assertEqual(second[0]["eventId"], "event-test-1")
-        self.assertEqual(second[0]["snapshotOffsetSeconds"], 1)
-        self.assertEqual(third[0]["snapshotOffsetSeconds"], 2)
+        self.assertAlmostEqual(second[0]["snapshotOffsetSeconds"], 1.01)
+        self.assertAlmostEqual(third[0]["snapshotOffsetSeconds"], 2.01)
         self.assertEqual(tracker.status()["capturedEvidence"], 3)
         self.assertEqual(self.observe(tracker, 3.0), [])
+
+    def test_snapshots_continue_at_the_configured_interval_while_event_is_active(self):
+        tracker = self.make_tracker(incident_snapshot_interval_seconds=0.5)
+        self.observe(tracker, 0.0)
+        self.observe(tracker, 0.1)
+        first = self.observe(tracker, 0.2)
+        second = self.observe(tracker, 0.71)
+        third = self.observe(tracker, 1.22)
+        fourth = self.observe(tracker, 1.73)
+
+        self.assertEqual(first[0]["snapshotOffsetSeconds"], 0)
+        self.assertAlmostEqual(second[0]["snapshotOffsetSeconds"], 0.51)
+        self.assertAlmostEqual(third[0]["snapshotOffsetSeconds"], 1.02)
+        self.assertAlmostEqual(fourth[0]["snapshotOffsetSeconds"], 1.53)
+        self.assertEqual(tracker.status()["capturedEvidence"], 4)
+        self.assertEqual(tracker.status()["snapshotIntervalSeconds"], 0.5)
 
     def test_rearms_after_three_continuous_seconds_without_a_detection(self):
         tracker = self.make_tracker(incident_cooldown_seconds=0)

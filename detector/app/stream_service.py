@@ -9,6 +9,7 @@ from typing import Any, Callable, Generator
 import cv2
 
 from .config import CameraSource, Settings
+from .incident_recorder import IncidentVideoRecorder
 from .incident_tracker import IncidentTracker
 from .yolo_detector import YoloDetector
 
@@ -24,6 +25,7 @@ class CameraStreamService:
         self.settings = settings
         self.detector = detector
         self.incident_tracker = IncidentTracker(settings)
+        self.incident_recorder = IncidentVideoRecorder(settings)
         self._incident_sink: Callable[[dict[str, Any]], bool] | None = None
         self._source: CameraSource = settings.camera_source
         self._capture: cv2.VideoCapture | None = None
@@ -112,7 +114,9 @@ class CameraStreamService:
             capture.release()
 
     def _set_offline(self, error: str) -> None:
-        self.incident_tracker.mark_absent()
+        ended_event_id = self.incident_tracker.end_active_event()
+        if ended_event_id:
+            self._submit_incident_payload(self.incident_recorder.finish(_utc_now()))
         with self._condition:
             self._camera_state = "OFFLINE"
             self._camera_error = error
@@ -157,11 +161,45 @@ class CameraStreamService:
 
             jpeg = encoded.tobytes()
             captured_at = _utc_now()
+            observed_at = time.monotonic()
+            event_before_observation = self.incident_tracker.active_event_id
             incident_evidence = self.incident_tracker.observe(
                 detections,
                 jpeg,
                 captured_at,
+                monotonic_at=observed_at,
             )
+            active_event_id = self.incident_tracker.active_event_id
+
+            if active_event_id and active_event_id != event_before_observation:
+                detection = (
+                    incident_evidence[0].get("detection")
+                    if incident_evidence
+                    else self.incident_tracker.current_detection
+                )
+                if detection:
+                    self.incident_recorder.start(
+                        active_event_id,
+                        captured_at,
+                        detection,
+                        annotated,
+                        monotonic_at=observed_at,
+                    )
+
+            completed_recording = self.incident_recorder.write_frame(
+                annotated,
+                captured_at,
+                monotonic_at=observed_at,
+            )
+            if (
+                event_before_observation
+                and active_event_id is None
+                and self.incident_recorder.active_event_id == event_before_observation
+            ):
+                completed_recording = self.incident_recorder.finish(
+                    captured_at,
+                    monotonic_at=observed_at,
+                )
 
             frame_counter += 1
             elapsed = time.perf_counter() - fps_window_started
@@ -182,15 +220,21 @@ class CameraStreamService:
                 self._detections = detections
                 self._condition.notify_all()
 
-            if self._incident_sink:
-                for evidence in incident_evidence:
-                    try:
-                        self._incident_sink(evidence)
-                    except Exception:
-                        # Incident delivery must never stop camera capture or streaming.
-                        continue
+            for evidence in incident_evidence:
+                self._submit_incident_payload(evidence)
+            self._submit_incident_payload(completed_recording)
 
+        self._submit_incident_payload(self.incident_recorder.finish(_utc_now()))
         self._release_capture()
+
+    def _submit_incident_payload(self, payload: dict[str, Any] | None) -> None:
+        if not payload or not self._incident_sink:
+            return
+        try:
+            self._incident_sink(payload)
+        except Exception:
+            # Incident delivery must never stop camera capture or streaming.
+            return
 
     def mjpeg_frames(self) -> Generator[bytes, None, None]:
         previous_sequence = -1
@@ -256,6 +300,9 @@ class CameraStreamService:
                     "jpegQuality": self.settings.jpeg_quality,
                 },
                 "detections": list(self._detections),
-                "incidentDetection": self.incident_tracker.status(),
+                "incidentDetection": {
+                    **self.incident_tracker.status(),
+                    "recording": self.incident_recorder.status(),
+                },
                 "heartbeatAt": _utc_now(),
             }

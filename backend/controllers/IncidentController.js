@@ -48,7 +48,9 @@ class IncidentController {
     this.getAllIncidents = this.getAllIncidents.bind(this);
     this.getIncidentById = this.getIncidentById.bind(this);
     this.ingestEvidence = this.ingestEvidence.bind(this);
+    this.ingestRecording = this.ingestRecording.bind(this);
     this.getEvidence = this.getEvidence.bind(this);
+    this.getRecording = this.getRecording.bind(this);
     this.getAllNotifications = this.getAllNotifications.bind(this);
   }
 
@@ -99,6 +101,83 @@ class IncidentController {
       );
       response.type(evidence.contentType);
       return response.send(evidence.body);
+    } catch (error) {
+      return sendError(response, error);
+    }
+  }
+
+  async ingestRecording(request, response) {
+    try {
+      const result = await this.service.ingestRecording(
+        request.params.cameraId,
+        bearerToken(request),
+        request.params.eventId,
+        {
+          recordingId: request.get('x-ismp-recording-id'),
+          startedAt: request.get('x-ismp-recording-started-at'),
+          endedAt: request.get('x-ismp-recording-ended-at'),
+          durationSeconds: request.get('x-ismp-recording-duration-seconds'),
+          frameCount: request.get('x-ismp-recording-frame-count'),
+          contentType: (request.get('content-type') || '').split(';')[0].trim().toLowerCase(),
+          classId: request.get('x-ismp-detection-class-id'),
+          label: decodedLabel(request),
+          confidence: request.get('x-ismp-detection-confidence'),
+          box: parsedBox(request),
+        },
+        request.body,
+      );
+      return response.status(result.created ? 201 : 200).json(result);
+    } catch (error) {
+      return sendError(response, error);
+    }
+  }
+
+  async getRecording(request, response) {
+    try {
+      const recording = await this.service.findRecording(request.params.incidentId);
+      const totalBytes = recording.body.length;
+      const range = request.get('range');
+
+      response.set({
+        'Accept-Ranges': 'bytes',
+        'Cache-Control': 'no-store, private',
+      });
+      response.type(recording.contentType);
+
+      if (!range) {
+        response.set('Content-Length', String(totalBytes));
+        return response.send(recording.body);
+      }
+
+      const match = range.match(/^bytes=(\d*)-(\d*)$/);
+      if (!match || (!match[1] && !match[2])) {
+        response.set('Content-Range', `bytes */${totalBytes}`);
+        return response.sendStatus(416);
+      }
+
+      let start;
+      let end;
+      if (!match[1]) {
+        const suffixLength = Math.min(Number(match[2]), totalBytes);
+        start = totalBytes - suffixLength;
+        end = totalBytes - 1;
+      } else {
+        start = Number(match[1]);
+        end = match[2] ? Math.min(Number(match[2]), totalBytes - 1) : totalBytes - 1;
+      }
+
+      if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || start > end || start >= totalBytes) {
+        response.set('Content-Range', `bytes */${totalBytes}`);
+        return response.sendStatus(416);
+      }
+
+      const chunk = recording.body.subarray(start, end + 1);
+      response.status(206);
+      response.set({
+        'Content-Range': `bytes ${start}-${end}/${totalBytes}`,
+        'Content-Length': String(chunk.length),
+      });
+      return response.send(chunk);
     } catch (error) {
       return sendError(response, error);
     }

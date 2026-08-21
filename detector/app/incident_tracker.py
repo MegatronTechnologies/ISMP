@@ -22,7 +22,8 @@ class IncidentTracker:
         self.confirm_window_seconds = settings.incident_confirm_window_seconds
         self.rearm_absence_seconds = settings.incident_rearm_absence_seconds
         self.cooldown_seconds = settings.incident_cooldown_seconds
-        self.snapshot_offsets = settings.incident_snapshot_offsets_seconds
+        self.snapshot_interval_seconds = settings.incident_snapshot_interval_seconds
+        self.max_snapshots = settings.incident_max_snapshots
         self._event_id_factory = event_id_factory or (lambda: f"evt-{uuid4().hex}")
         self._capture_id_factory = capture_id_factory or (lambda: f"cap-{uuid4().hex}")
         self._lock = threading.RLock()
@@ -31,8 +32,19 @@ class IncidentTracker:
         self._active_started_at: float | None = None
         self._missing_since: float | None = None
         self._last_event_started_at: float | None = None
-        self._next_snapshot_index = 0
+        self._captured_evidence = 0
+        self._next_snapshot_at = 0.0
         self._last_detection: dict[str, Any] | None = None
+
+    @property
+    def active_event_id(self) -> str | None:
+        with self._lock:
+            return self._active_event_id
+
+    @property
+    def current_detection(self) -> dict[str, Any] | None:
+        with self._lock:
+            return dict(self._last_detection) if self._last_detection else None
 
     def observe(
         self,
@@ -82,7 +94,8 @@ class IncidentTracker:
                 self._active_event_id = self._event_id_factory()
                 self._active_started_at = now
                 self._last_event_started_at = now
-                self._next_snapshot_index = 0
+                self._captured_evidence = 0
+                self._next_snapshot_at = 0.0
                 self._positive_frames.clear()
 
             return self._capture_if_due(jpeg, captured_at, now, detection_present=True)
@@ -96,20 +109,20 @@ class IncidentTracker:
     ) -> list[dict[str, Any]]:
         if self._active_event_id is None or jpeg is None or self._last_detection is None:
             return []
-        if self._next_snapshot_index >= len(self.snapshot_offsets):
+        if self._captured_evidence >= self.max_snapshots:
             return []
 
         active_started_at = self._active_started_at if self._active_started_at is not None else now
         elapsed = now - active_started_at
-        offset = self.snapshot_offsets[self._next_snapshot_index]
-        if elapsed < offset:
+        if elapsed < self._next_snapshot_at:
             return []
 
         evidence = {
+            "kind": "snapshot",
             "eventId": self._active_event_id,
             "captureId": self._capture_id_factory(),
             "capturedAt": captured_at,
-            "snapshotOffsetSeconds": offset,
+            "snapshotOffsetSeconds": round(elapsed, 3),
             "detectionPresent": detection_present,
             "detection": {
                 "classId": self._last_detection["classId"],
@@ -119,7 +132,8 @@ class IncidentTracker:
             },
             "jpeg": jpeg,
         }
-        self._next_snapshot_index += 1
+        self._captured_evidence += 1
+        self._next_snapshot_at = elapsed + self.snapshot_interval_seconds
         return [evidence]
 
     def mark_absent(self, monotonic_at: float | None = None) -> None:
@@ -129,13 +143,21 @@ class IncidentTracker:
             if self._active_event_id and self._missing_since is None:
                 self._missing_since = now
 
+    def end_active_event(self) -> str | None:
+        with self._lock:
+            event_id = self._active_event_id
+            if event_id is not None:
+                self._deactivate()
+            return event_id
+
     def status(self) -> dict[str, Any]:
         with self._lock:
             return {
                 "active": self._active_event_id is not None,
                 "activeEventId": self._active_event_id,
-                "capturedEvidence": self._next_snapshot_index,
-                "configuredEvidence": len(self.snapshot_offsets),
+                "capturedEvidence": self._captured_evidence,
+                "configuredEvidence": self.max_snapshots,
+                "snapshotIntervalSeconds": self.snapshot_interval_seconds,
                 "rearmAbsenceSeconds": self.rearm_absence_seconds,
                 "cooldownSeconds": self.cooldown_seconds,
             }
@@ -149,6 +171,7 @@ class IncidentTracker:
         self._active_event_id = None
         self._active_started_at = None
         self._missing_since = None
-        self._next_snapshot_index = 0
+        self._captured_evidence = 0
+        self._next_snapshot_at = 0.0
         self._last_detection = None
         self._positive_frames.clear()

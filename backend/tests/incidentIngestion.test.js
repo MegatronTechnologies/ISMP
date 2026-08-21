@@ -8,9 +8,22 @@ const { CameraRegistryService } = require('../services/CameraRegistryService');
 const { IncidentIngestionService } = require('../services/IncidentIngestionService');
 
 const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xd9]);
+const webm = Buffer.from([0x1a, 0x45, 0xdf, 0xa3, 0x01, 0x02, 0x03, 0x04]);
 const metadata = {
   captureId: 'capture-test-1',
   capturedAt: '2026-08-21T12:00:00.000Z',
+  classId: 39,
+  label: 'bottle',
+  confidence: 0.94,
+  box: [10, 20, 110, 220],
+};
+const recordingMetadata = {
+  recordingId: 'recording-test-1',
+  startedAt: '2026-08-21T12:00:00.000Z',
+  endedAt: '2026-08-21T12:00:05.000Z',
+  durationSeconds: 5,
+  frameCount: 50,
+  contentType: 'video/webm',
   classId: 39,
   label: 'bottle',
   confidence: 0.94,
@@ -96,6 +109,36 @@ test('retries are idempotent and later snapshots append to the same incident', a
   assert.equal((await fixture.notificationRepository.findAll()).length, 1);
 });
 
+test('completed WebM recording is attached idempotently to the canonical incident', async () => {
+  const fixture = await createFixture();
+  await fixture.service.ingestEvidence(
+    'cam-test-1', 'device-token-value', 'event-test-1', metadata, jpeg,
+  );
+
+  const first = await fixture.service.ingestRecording(
+    'cam-test-1',
+    'device-token-value',
+    'event-test-1',
+    recordingMetadata,
+    webm,
+  );
+  const duplicate = await fixture.service.ingestRecording(
+    'cam-test-1',
+    'device-token-value',
+    'event-test-1',
+    recordingMetadata,
+    webm,
+  );
+
+  assert.equal(first.created, false);
+  assert.equal(first.duplicate, false);
+  assert.equal(first.incident.recording.contentType, 'video/webm');
+  assert.equal(first.incident.recording.durationSeconds, 5);
+  assert.equal(duplicate.duplicate, true);
+  const stored = await fixture.service.findRecording('INC-TEST-1');
+  assert.deepEqual(stored.body, webm);
+});
+
 test('invalid device credentials and invalid evidence are rejected', async () => {
   const fixture = await createFixture();
   await assert.rejects(
@@ -139,5 +182,9 @@ test('a fresh demo service has no incidents, notifications, or evidence', async 
   await assert.rejects(
     restarted.service.findEvidence('INC-TEST-1', 'capture-test-1'),
     error => error.statusCode === 404 && error.code === 'EVIDENCE_NOT_FOUND',
+  );
+  await assert.rejects(
+    restarted.service.findRecording('INC-TEST-1'),
+    error => error.statusCode === 404 && error.code === 'RECORDING_NOT_FOUND',
   );
 });

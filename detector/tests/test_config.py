@@ -34,6 +34,14 @@ class ConfigTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             Settings(incident_snapshot_offsets_seconds=(0, 2, 1)).validate()
 
+    def test_periodic_snapshot_and_video_settings_are_validated(self):
+        with self.assertRaises(ValueError):
+            Settings(incident_snapshot_interval_seconds=0).validate()
+        with self.assertRaises(ValueError):
+            Settings(incident_max_snapshots=0).validate()
+        with self.assertRaises(ValueError):
+            Settings(incident_video_codec="bad").validate()
+
 
 if __name__ == "__main__":
     unittest.main()

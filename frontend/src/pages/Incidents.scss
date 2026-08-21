@@ -322,8 +322,25 @@
       }
 
       .evidence-summary-text {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
         font-size: 0.8rem;
         color: var(--text-secondary);
+      }
+
+      .video-ready-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.18rem 0.4rem;
+        border: 1px solid rgba(52, 152, 219, 0.35);
+        border-radius: 4px;
+        background: rgba(52, 152, 219, 0.14);
+        color: #3498db;
+        font-size: 0.7rem;
+        white-space: nowrap;
       }
       
       .btn-link {
@@ -406,6 +423,24 @@
               font-size: 0.7rem;
               padding: 0.2rem 0.5rem;
               border-radius: 4px;
+            }
+          }
+
+          .video-overlay {
+            position: absolute;
+            right: 10px;
+            bottom: 8px;
+
+            .video-ready-pill {
+              display: inline-flex;
+              align-items: center;
+              gap: 0.3rem;
+              padding: 0.2rem 0.5rem;
+              border: 1px solid rgba(52, 152, 219, 0.45);
+              border-radius: 4px;
+              background: rgba(0, 0, 0, 0.78);
+              color: #69bdf3;
+              font-size: 0.7rem;
             }
           }
         }
@@ -504,6 +539,54 @@
   }
 
   .edge-evidence-viewer {
+    .incident-recording-section {
+      margin-bottom: 1.5rem;
+
+      .media-section-title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+      }
+
+      .incident-video-container {
+        overflow: hidden;
+        aspect-ratio: 16 / 9;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background: #000;
+
+        .incident-video {
+          display: block;
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+      }
+
+      .recording-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-top: 0.65rem;
+        color: var(--text-secondary);
+        font-size: 0.82rem;
+      }
+    }
+
+    .recording-error-notice {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin: -0.75rem 0 1.25rem;
+      padding: 0.65rem 0.8rem;
+      border: 1px solid rgba(224, 58, 62, 0.35);
+      border-radius: 6px;
+      background: rgba(224, 58, 62, 0.08);
+      color: var(--text-secondary);
+      font-size: 0.82rem;
+    }
+
     .evidence-main-preview {
       margin-bottom: 1.5rem;
 
@@ -629,6 +712,18 @@
             border-radius: 3px;
           }
         }
+
+        &.evidence-collage {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+          overflow: visible;
+
+          .thumb-button {
+            width: 100%;
+            height: 100px;
+          }
+
+        }
       }
     }
 
@@ -642,6 +737,78 @@
       border: 1px solid var(--border-color);
       padding: 0.6rem 0.85rem;
       border-radius: 6px;
+    }
+
+    .evidence-lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 3000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      background: rgba(0, 0, 0, 0.84);
+      backdrop-filter: blur(5px);
+
+      .evidence-lightbox-content {
+        position: relative;
+        display: flex;
+        width: min(75vw, 1200px);
+        max-height: 86vh;
+        flex-direction: column;
+        align-items: center;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 10px;
+        background: #090a0d;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+
+        > img {
+          display: block;
+          max-width: 100%;
+          max-height: calc(86vh - 74px);
+          object-fit: contain;
+        }
+      }
+
+      .evidence-lightbox-close {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        z-index: 1;
+        display: grid;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.72);
+        color: #fff;
+        cursor: pointer;
+      }
+
+      .evidence-lightbox-fallback {
+        display: flex;
+        width: 100%;
+        min-height: 55vh;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        color: var(--text-tertiary);
+      }
+
+      .evidence-lightbox-caption {
+        display: flex;
+        width: 100%;
+        min-height: 58px;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        padding: 0.85rem 1rem;
+        color: #fff;
+        font-size: 0.85rem;
+      }
     }
   }
   
@@ -744,6 +911,22 @@
           .time { font-family: var(--font-mono); color: var(--text-tertiary); font-size: 0.75rem;}
         }
       }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .incident-details .edge-evidence-viewer .evidence-lightbox {
+    padding: 1rem;
+
+    .evidence-lightbox-content {
+      width: 94vw;
+    }
+
+    .evidence-lightbox-caption {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 0.25rem;
     }
   }
 }

@@ -13,7 +13,8 @@ import {
   ShieldAlert, 
   Cpu, 
   ImageIcon,
-  Filter
+  Filter,
+  Video
 } from 'lucide-react';
 import { getLocale } from '../utils/dateHelper';
 import { resolveEvidenceUrl, fetchCentralIncidents } from '../services/centralIncidentApi';
@@ -289,10 +290,17 @@ const Incidents = () => {
                           </td>
                           <td>
                             <span className="evidence-summary-text">
-                              {isReal 
-                                ? t(evidenceCount === 1 ? '{{count}} capture' : '{{count}} captures', { count: evidenceCount })
-                                : inc.responseTime || '-'
-                              }
+                              <span>
+                                {isReal
+                                  ? t(evidenceCount === 1 ? '{{count}} capture' : '{{count}} captures', { count: evidenceCount })
+                                  : inc.responseTime || '-'
+                                }
+                              </span>
+                              {isReal && inc.recording?.url && (
+                                <span className="video-ready-pill">
+                                  <Video size={12} /> {t('Video ready')}
+                                </span>
+                              )}
                             </span>
                           </td>
                           <td>
@@ -340,7 +348,7 @@ const Incidents = () => {
                             {isReal ? t('Edge AI') : t('Simulated')}
                           </span>
                         </div>
-                          {evidenceCount > 0 && (
+                        {evidenceCount > 0 && (
                             <div className="evidence-overlay">
                               <span className="evidence-pill">
                                 <ImageIcon size={12} /> {t(
@@ -349,6 +357,13 @@ const Incidents = () => {
                                 )}
                               </span>
                             </div>
+                        )}
+                        {isReal && inc.recording?.url && (
+                          <div className="video-overlay">
+                            <span className="video-ready-pill">
+                              <Video size={12} /> {t('Video ready')}
+                            </span>
+                          </div>
                         )}
                       </div>
                       <div className="card-body">

@@ -4,6 +4,7 @@ const { hashToken, safeEqual } = require('./CameraRegistryService');
 
 const SAFE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/;
 const MAX_EVIDENCE_BYTES = 2 * 1024 * 1024;
+const MAX_RECORDING_BYTES = 64 * 1024 * 1024;
 
 class IncidentIngestionError extends Error {
   constructor(statusCode, code, message) {
@@ -60,6 +61,22 @@ const requiredJpeg = value => {
   return value;
 };
 
+const requiredRecording = (value, contentType) => {
+  if (!['video/webm', 'video/mp4'].includes(contentType)) {
+    throw new IncidentIngestionError(400, 'INVALID_RECORDING', 'Recording must be WebM or MP4');
+  }
+  if (!Buffer.isBuffer(value) || value.length < 4 || value.length > MAX_RECORDING_BYTES) {
+    throw new IncidentIngestionError(400, 'INVALID_RECORDING', 'Recording must be between 4 bytes and 64 MB');
+  }
+  if (
+    contentType === 'video/webm'
+    && !(value[0] === 0x1a && value[1] === 0x45 && value[2] === 0xdf && value[3] === 0xa3)
+  ) {
+    throw new IncidentIngestionError(400, 'INVALID_RECORDING', 'Recording body is not a WebM container');
+  }
+  return value;
+};
+
 const defaultIncidentId = () => {
   const timestamp = new Date().toISOString().replace(/\D/g, '').slice(0, 14);
   return `INC-${timestamp}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
@@ -71,11 +88,12 @@ class IncidentIngestionService {
     this.incidentRepository = options.incidentRepository;
     this.notificationRepository = options.notificationRepository;
     this.evidenceBodies = new Map();
+    this.recordingBodies = new Map();
     this.now = options.now || (() => new Date());
     this.incidentIdFactory = options.incidentIdFactory || defaultIncidentId;
     this.maxEvidencePerIncident = Number.isInteger(options.maxEvidencePerIncident)
       ? options.maxEvidencePerIncident
-      : 10;
+      : 120;
   }
 
   async authenticateCamera(cameraId, deviceToken) {
@@ -103,37 +121,12 @@ class IncidentIngestionService {
     };
     const jpeg = requiredJpeg(jpegBody);
 
-    let incident = await this.incidentRepository.findBySourceEvent(cameraId, eventId);
-    let created = false;
-    const now = this.now().toISOString();
-
-    if (!incident) {
-      incident = await this.incidentRepository.create({
-        id: this.incidentIdFactory(),
-        sourceEventId: eventId,
-        source: 'YOLO_EDGE',
-        cameraId: camera.id,
-        cameraName: camera.name,
-        cameraScope: camera.scope,
-        organizationId: camera.organizationId,
-        detectionType: detection.label,
-        detectionClassId: detection.classId,
-        confidence: detection.confidence,
-        status: 'NEW',
-        startedAt: capturedAt,
-        acknowledgedAt: null,
-        resolvedAt: null,
-        responseTime: null,
-        evidence: [],
-        evidenceCount: 0,
-        createdAt: now,
-        updatedAt: now,
-      });
-      created = true;
-
-    }
-
-    await this.ensureNotification(incident, camera, detection);
+    let { incident, created, now } = await this.ensureIncident(
+      camera,
+      eventId,
+      detection,
+      capturedAt,
+    );
 
     const duplicate = incident.evidence.some(evidence => evidence.id === captureId);
     if (!duplicate) {
@@ -160,6 +153,97 @@ class IncidentIngestionService {
     return { accepted: true, created, duplicate, incident: this.toPublic(incident) };
   }
 
+  async ingestRecording(cameraId, deviceToken, sourceEventId, metadata, recordingBody) {
+    if (!this.incidentRepository?.findBySourceEvent || !this.incidentRepository?.setRecording) {
+      throw new IncidentIngestionError(503, 'INCIDENT_STORAGE_UNAVAILABLE', 'Incident recording storage is not configured');
+    }
+
+    const camera = await this.authenticateCamera(cameraId, deviceToken);
+    const eventId = requiredSafeId(sourceEventId, 'eventId');
+    const recordingId = requiredSafeId(metadata.recordingId, 'recordingId');
+    const startedAt = requiredTimestamp(metadata.startedAt, 'startedAt');
+    const endedAt = requiredTimestamp(metadata.endedAt, 'endedAt');
+    if (Date.parse(endedAt) < Date.parse(startedAt)) {
+      throw new IncidentIngestionError(400, 'INVALID_EVENT_METADATA', 'endedAt cannot be before startedAt');
+    }
+    const durationSeconds = requiredNumber(metadata.durationSeconds, 'durationSeconds', 0, 3600);
+    const frameCount = Math.trunc(requiredNumber(metadata.frameCount, 'frameCount', 1, 216000));
+    const contentType = metadata.contentType;
+    const recording = requiredRecording(recordingBody, contentType);
+    const detection = {
+      classId: Math.trunc(requiredNumber(metadata.classId, 'classId', 0, 100000)),
+      label: requiredLabel(metadata.label),
+      confidence: requiredNumber(metadata.confidence, 'confidence', 0, 1),
+      box: requiredBox(metadata.box),
+    };
+
+    let { incident, created, now } = await this.ensureIncident(
+      camera,
+      eventId,
+      detection,
+      startedAt,
+    );
+    const duplicate = incident.recording?.id === recordingId;
+    if (incident.recording && !duplicate) {
+      throw new IncidentIngestionError(409, 'RECORDING_ALREADY_EXISTS', 'Incident already has a recording');
+    }
+
+    if (!duplicate) {
+      this.recordingBodies.set(this.recordingKey(incident.id, recordingId), Buffer.from(recording));
+      incident = await this.incidentRepository.setRecording(
+        incident.id,
+        {
+          id: recordingId,
+          startedAt,
+          endedAt,
+          durationSeconds,
+          frameCount,
+          sizeBytes: recording.length,
+          contentType,
+          url: `/api/v1/incidents/${encodeURIComponent(incident.id)}/recording`,
+        },
+        now,
+      );
+    }
+
+    return { accepted: true, created, duplicate, incident: this.toPublic(incident) };
+  }
+
+  async ensureIncident(camera, eventId, detection, startedAt) {
+    let incident = await this.incidentRepository.findBySourceEvent(camera.id, eventId);
+    let created = false;
+    const now = this.now().toISOString();
+
+    if (!incident) {
+      incident = await this.incidentRepository.create({
+        id: this.incidentIdFactory(),
+        sourceEventId: eventId,
+        source: 'YOLO_EDGE',
+        cameraId: camera.id,
+        cameraName: camera.name,
+        cameraScope: camera.scope,
+        organizationId: camera.organizationId,
+        detectionType: detection.label,
+        detectionClassId: detection.classId,
+        confidence: detection.confidence,
+        status: 'NEW',
+        startedAt,
+        acknowledgedAt: null,
+        resolvedAt: null,
+        responseTime: null,
+        evidence: [],
+        evidenceCount: 0,
+        recording: null,
+        createdAt: now,
+        updatedAt: now,
+      });
+      created = true;
+    }
+
+    await this.ensureNotification(incident, camera, detection);
+    return { incident, created, now };
+  }
+
   async findAll() {
     const incidents = await this.incidentRepository.findAll();
     return incidents.map(incident => this.toPublic(incident));
@@ -184,6 +268,19 @@ class IncidentIngestionService {
       throw new IncidentIngestionError(404, 'EVIDENCE_NOT_FOUND', 'Incident evidence not found');
     }
     return { body, contentType: evidence.contentType };
+  }
+
+  async findRecording(incidentId) {
+    const incident = await this.incidentRepository.findById(incidentId);
+    const recording = incident?.recording;
+    if (!recording) {
+      throw new IncidentIngestionError(404, 'RECORDING_NOT_FOUND', 'Incident recording not found');
+    }
+    const body = this.recordingBodies.get(this.recordingKey(incidentId, recording.id));
+    if (!body) {
+      throw new IncidentIngestionError(404, 'RECORDING_NOT_FOUND', 'Incident recording not found');
+    }
+    return { body, contentType: recording.contentType, recording: { ...recording } };
   }
 
   async findNotifications() {
@@ -216,11 +313,16 @@ class IncidentIngestionService {
     return `${incidentId}:${evidenceId}`;
   }
 
+  recordingKey(incidentId, recordingId) {
+    return `${incidentId}:${recordingId}`;
+  }
+
   toPublic(incident) {
     return {
       ...incident,
       evidence: (incident.evidence || []).map(evidence => ({ ...evidence })),
       evidenceCount: (incident.evidence || []).length,
+      recording: incident.recording ? { ...incident.recording } : null,
     };
   }
 }
@@ -229,4 +331,5 @@ module.exports = {
   IncidentIngestionError,
   IncidentIngestionService,
   MAX_EVIDENCE_BYTES,
+  MAX_RECORDING_BYTES,
 };

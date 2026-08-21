@@ -88,7 +88,19 @@ class Settings:
     incident_snapshot_offsets_seconds: tuple[float, ...] = _float_list(
         os.getenv("ISMP_INCIDENT_SNAPSHOT_OFFSETS_SECONDS", "0,1,2")
     )
-    incident_event_queue_size: int = int(os.getenv("ISMP_INCIDENT_EVENT_QUEUE_SIZE", "16"))
+    incident_snapshot_interval_seconds: float = float(
+        os.getenv("ISMP_INCIDENT_SNAPSHOT_INTERVAL_SECONDS", "1")
+    )
+    incident_max_snapshots: int = int(os.getenv("ISMP_INCIDENT_MAX_SNAPSHOTS", "60"))
+    incident_video_fps: float = float(os.getenv("ISMP_INCIDENT_VIDEO_FPS", "10"))
+    incident_video_max_seconds: float = float(
+        os.getenv("ISMP_INCIDENT_VIDEO_MAX_SECONDS", "60")
+    )
+    incident_video_codec: str = os.getenv("ISMP_INCIDENT_VIDEO_CODEC", "VP80").strip()
+    incident_video_extension: str = os.getenv(
+        "ISMP_INCIDENT_VIDEO_EXTENSION", "webm"
+    ).strip().lower()
+    incident_event_queue_size: int = int(os.getenv("ISMP_INCIDENT_EVENT_QUEUE_SIZE", "128"))
     incident_event_retry_seconds: float = float(os.getenv("ISMP_INCIDENT_EVENT_RETRY_SECONDS", "2"))
     incident_event_max_attempts: int = int(os.getenv("ISMP_INCIDENT_EVENT_MAX_ATTEMPTS", "5"))
 
@@ -123,8 +135,20 @@ class Settings:
             != self.incident_snapshot_offsets_seconds
         ):
             raise ValueError("Incident snapshot offsets must be unique, non-negative, and ascending")
-        if self.incident_event_queue_size < len(self.incident_snapshot_offsets_seconds):
-            raise ValueError("ISMP_INCIDENT_EVENT_QUEUE_SIZE must fit all configured snapshots")
+        if self.incident_snapshot_interval_seconds <= 0:
+            raise ValueError("ISMP_INCIDENT_SNAPSHOT_INTERVAL_SECONDS must be positive")
+        if not 1 <= self.incident_max_snapshots <= 1000:
+            raise ValueError("ISMP_INCIDENT_MAX_SNAPSHOTS must be between 1 and 1000")
+        if not 0 < self.incident_video_fps <= 60:
+            raise ValueError("ISMP_INCIDENT_VIDEO_FPS must be between 0 and 60")
+        if not 0 < self.incident_video_max_seconds <= 3600:
+            raise ValueError("ISMP_INCIDENT_VIDEO_MAX_SECONDS must be between 0 and 3600")
+        if len(self.incident_video_codec) != 4:
+            raise ValueError("ISMP_INCIDENT_VIDEO_CODEC must contain exactly four characters")
+        if self.incident_video_extension not in {"webm", "mp4"}:
+            raise ValueError("ISMP_INCIDENT_VIDEO_EXTENSION must be webm or mp4")
+        if self.incident_event_queue_size < 2:
+            raise ValueError("ISMP_INCIDENT_EVENT_QUEUE_SIZE must be at least 2")
         if self.incident_event_retry_seconds <= 0 or self.incident_event_max_attempts < 1:
             raise ValueError("Incident delivery retry settings are invalid")
         if self.configured_camera_id and not re.fullmatch(

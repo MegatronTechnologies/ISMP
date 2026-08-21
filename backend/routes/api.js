@@ -17,10 +17,16 @@ router.post(
   express.raw({ type: 'image/jpeg', limit: '2mb' }),
   incidentController.ingestEvidence,
 );
+router.post(
+  '/v1/edge/cameras/:cameraId/detection-events/:eventId/recording',
+  express.raw({ type: ['video/webm', 'video/mp4'], limit: '64mb' }),
+  incidentController.ingestRecording,
+);
 router.get('/v1/cameras', cameraController.getAll);
 router.get('/v1/cameras/:cameraId', cameraController.getById);
 router.get('/v1/incidents', incidentController.getAllIncidents);
 router.get('/v1/incidents/:incidentId/evidence/:evidenceId', incidentController.getEvidence);
+router.get('/v1/incidents/:incidentId/recording', incidentController.getRecording);
 router.get('/v1/incidents/:incidentId', incidentController.getIncidentById);
 router.get('/v1/notifications', incidentController.getAllNotifications);
 

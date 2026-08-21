@@ -14,7 +14,9 @@ import {
   Clock, 
   AlertCircle,
   RefreshCw,
-  Building
+  Building,
+  X,
+  PlayCircle
 } from 'lucide-react';
 import { acknowledgeDemoIncident, resolveDemoIncident } from '../redux/actions/demoActions';
 import { getLocale } from '../utils/dateHelper';
@@ -35,6 +37,8 @@ const IncidentDetails = () => {
   const [isLoadingDirect, setIsLoadingDirect] = useState(false);
   const [directFetchError, setDirectFetchError] = useState(null);
   const [brokenEvidenceImages, setBrokenEvidenceImages] = useState({});
+  const [expandedEvidenceIndex, setExpandedEvidenceIndex] = useState(null);
+  const [recordingError, setRecordingError] = useState(false);
 
   const storeIncident = incidents.find((i) => i.id === id);
 
@@ -78,7 +82,18 @@ const IncidentDetails = () => {
   useEffect(() => {
     setSelectedEvidenceIndex(0);
     setBrokenEvidenceImages({});
+    setExpandedEvidenceIndex(null);
+    setRecordingError(false);
   }, [id]);
+
+  useEffect(() => {
+    if (expandedEvidenceIndex === null) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setExpandedEvidenceIndex(null);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [expandedEvidenceIndex]);
 
   const incident = storeIncident;
 
@@ -123,6 +138,10 @@ const IncidentDetails = () => {
   const isReal = incident.source === 'YOLO_EDGE';
   const evidenceList = Array.isArray(incident.evidence) ? incident.evidence : [];
   const currentEvidence = evidenceList[selectedEvidenceIndex] || evidenceList[0] || null;
+  const expandedEvidence = expandedEvidenceIndex === null
+    ? null
+    : evidenceList[expandedEvidenceIndex] || null;
+  const recording = incident.recording || null;
   const evidenceImageKey = (evidence, index) => evidence?.id || evidence?.url || String(index);
   const currentEvidenceKey = currentEvidence
     ? evidenceImageKey(currentEvidence, selectedEvidenceIndex)
@@ -162,6 +181,33 @@ const IncidentDetails = () => {
             <div className="media-panel">
               {isReal ? (
                 <div className="edge-evidence-viewer">
+                  {recording?.url && !recordingError ? (
+                    <div className="incident-recording-section">
+                      <h4 className="media-section-title">
+                        <PlayCircle size={18} /> {t('Incident Video Replay')}
+                      </h4>
+                      <div className="incident-video-container">
+                        <video
+                          src={resolveEvidenceUrl(recording.url)}
+                          poster={currentEvidence?.url ? resolveEvidenceUrl(currentEvidence.url) : undefined}
+                          className="incident-video"
+                          controls
+                          autoPlay
+                          muted
+                          loop
+                          playsInline
+                          preload="metadata"
+                          onError={() => setRecordingError(true)}
+                        >
+                          {t('Your browser cannot play this incident recording.')}
+                        </video>
+                      </div>
+                      <div className="recording-summary">
+                        <span>{t('Duration')}: {Number(recording.durationSeconds || 0).toFixed(1)}s</span>
+                        <span>{t('Video Frames')}: {recording.frameCount || 0}</span>
+                      </div>
+                    </div>
+                  ) : (
                   <div className="evidence-main-preview">
                     {currentEvidence && currentEvidence.url ? (
                       <div className="evidence-image-container">
@@ -209,6 +255,14 @@ const IncidentDetails = () => {
                       </div>
                     )}
                   </div>
+                  )}
+
+                  {recordingError && (
+                    <div className="recording-error-notice">
+                      <AlertCircle size={16} />
+                      <span>{t('Recorded incident video is unavailable. Showing captured photos instead.')}</span>
+                    </div>
+                  )}
 
                   {/* Thumbnail Gallery Strip */}
                   {evidenceList.length > 0 && (
@@ -216,7 +270,7 @@ const IncidentDetails = () => {
                       <h4>
                         {t('Evidence Captures')} ({evidenceList.length})
                       </h4>
-                      <div className="thumbs">
+                      <div className="thumbs evidence-collage">
                         {evidenceList.map((ev, idx) => {
                           const isSelected = idx === selectedEvidenceIndex;
                           const imageKey = evidenceImageKey(ev, idx);
@@ -225,8 +279,11 @@ const IncidentDetails = () => {
                               key={ev.id || idx}
                               type="button"
                               className={`thumb-item thumb-button ${isSelected ? 'active' : ''}`}
-                              onClick={() => setSelectedEvidenceIndex(idx)}
-                              title={t('Select Frame {{number}}', { number: idx + 1 })}
+                              onClick={() => {
+                                setSelectedEvidenceIndex(idx);
+                                setExpandedEvidenceIndex(idx);
+                              }}
+                              title={t('Open Frame {{number}}', { number: idx + 1 })}
                             >
                               {ev.url && !brokenEvidenceImages[imageKey] ? (
                                 <img
@@ -253,6 +310,51 @@ const IncidentDetails = () => {
                     <AlertCircle size={14} />
                     <span>{t('Real Edge AI Evidence: JPEG snapshots captured autonomously during detection.')}</span>
                   </div>
+
+                  {expandedEvidence && (
+                    <div
+                      className="evidence-lightbox"
+                      role="dialog"
+                      aria-modal="true"
+                      aria-label={t('Expanded Evidence Frame')}
+                      onClick={() => setExpandedEvidenceIndex(null)}
+                    >
+                      <div className="evidence-lightbox-content" onClick={(event) => event.stopPropagation()}>
+                        <button
+                          type="button"
+                          className="evidence-lightbox-close"
+                          onClick={() => setExpandedEvidenceIndex(null)}
+                          aria-label={t('Close image viewer')}
+                        >
+                          <X size={22} />
+                        </button>
+                        {brokenEvidenceImages[evidenceImageKey(expandedEvidence, expandedEvidenceIndex)] ? (
+                          <div className="evidence-lightbox-fallback">
+                            <ImageIcon size={48} />
+                            <span>{t('Evidence image unavailable')}</span>
+                          </div>
+                        ) : (
+                          <img
+                            src={resolveEvidenceUrl(expandedEvidence.url)}
+                            alt={t('Expanded evidence frame {{number}}', { number: expandedEvidenceIndex + 1 })}
+                            onError={() => markEvidenceImageBroken(expandedEvidence, expandedEvidenceIndex)}
+                          />
+                        )}
+                        <div className="evidence-lightbox-caption">
+                          <strong>{t('Frame {{current}} of {{total}}', {
+                            current: expandedEvidenceIndex + 1,
+                            total: evidenceList.length,
+                          })}</strong>
+                          {expandedEvidence.capturedAt && (
+                            <span>{new Date(expandedEvidence.capturedAt).toLocaleString(locale)}</span>
+                          )}
+                          {expandedEvidence.confidence !== undefined && (
+                            <span>{t('Confidence')}: {(Number(expandedEvidence.confidence) * 100).toFixed(0)}%</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <>
