@@ -33,6 +33,13 @@ def _origins(value: str) -> tuple[str, ...]:
     return tuple(origin.strip().rstrip("/") for origin in value.split(",") if origin.strip())
 
 
+def _float_list(value: str) -> tuple[float, ...]:
+    values = tuple(float(part.strip()) for part in value.split(",") if part.strip())
+    if not values:
+        raise ValueError("ISMP_INCIDENT_SNAPSHOT_OFFSETS_SECONDS must contain at least one value")
+    return values
+
+
 def _local_path(value: str) -> Path:
     path = Path(value.strip())
     return path if path.is_absolute() else DETECTOR_ROOT / path
@@ -70,6 +77,20 @@ class Settings:
     identity_file: Path = _local_path(os.getenv("ISMP_EDGE_IDENTITY_FILE", ".device.json"))
     heartbeat_seconds: float = float(os.getenv("ISMP_HEARTBEAT_SECONDS", "10"))
     central_timeout_seconds: float = float(os.getenv("ISMP_CENTRAL_TIMEOUT_SECONDS", "5"))
+    incident_confirm_frames: int = int(os.getenv("ISMP_INCIDENT_CONFIRM_FRAMES", "3"))
+    incident_confirm_window_seconds: float = float(
+        os.getenv("ISMP_INCIDENT_CONFIRM_WINDOW_SECONDS", "2")
+    )
+    incident_rearm_absence_seconds: float = float(
+        os.getenv("ISMP_INCIDENT_REARM_ABSENCE_SECONDS", "3")
+    )
+    incident_cooldown_seconds: float = float(os.getenv("ISMP_INCIDENT_COOLDOWN_SECONDS", "30"))
+    incident_snapshot_offsets_seconds: tuple[float, ...] = _float_list(
+        os.getenv("ISMP_INCIDENT_SNAPSHOT_OFFSETS_SECONDS", "0,1,2")
+    )
+    incident_event_queue_size: int = int(os.getenv("ISMP_INCIDENT_EVENT_QUEUE_SIZE", "16"))
+    incident_event_retry_seconds: float = float(os.getenv("ISMP_INCIDENT_EVENT_RETRY_SECONDS", "2"))
+    incident_event_max_attempts: int = int(os.getenv("ISMP_INCIDENT_EVENT_MAX_ATTEMPTS", "5"))
 
     def validate(self) -> None:
         if not 1 <= self.port <= 65535:
@@ -88,6 +109,24 @@ class Settings:
             raise ValueError("ISMP_HEARTBEAT_SECONDS must be at least 1")
         if self.central_timeout_seconds <= 0:
             raise ValueError("ISMP_CENTRAL_TIMEOUT_SECONDS must be positive")
+        if self.incident_confirm_frames < 1:
+            raise ValueError("ISMP_INCIDENT_CONFIRM_FRAMES must be at least 1")
+        if self.incident_confirm_window_seconds <= 0:
+            raise ValueError("ISMP_INCIDENT_CONFIRM_WINDOW_SECONDS must be positive")
+        if self.incident_rearm_absence_seconds <= 0:
+            raise ValueError("ISMP_INCIDENT_REARM_ABSENCE_SECONDS must be positive")
+        if self.incident_cooldown_seconds < 0:
+            raise ValueError("ISMP_INCIDENT_COOLDOWN_SECONDS cannot be negative")
+        if (
+            any(offset < 0 for offset in self.incident_snapshot_offsets_seconds)
+            or tuple(sorted(set(self.incident_snapshot_offsets_seconds)))
+            != self.incident_snapshot_offsets_seconds
+        ):
+            raise ValueError("Incident snapshot offsets must be unique, non-negative, and ascending")
+        if self.incident_event_queue_size < len(self.incident_snapshot_offsets_seconds):
+            raise ValueError("ISMP_INCIDENT_EVENT_QUEUE_SIZE must fit all configured snapshots")
+        if self.incident_event_retry_seconds <= 0 or self.incident_event_max_attempts < 1:
+            raise ValueError("Incident delivery retry settings are invalid")
         if self.configured_camera_id and not re.fullmatch(
             r"[A-Za-z0-9][A-Za-z0-9._-]{2,63}",
             self.configured_camera_id,

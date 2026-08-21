@@ -1,10 +1,9 @@
 class MockIncidentRepository {
-  constructor() {
-    this.incidents = [
-      { id: 'INC-1042', camera: 'Demo Camera', type: 'WEAPON', time: new Date().toISOString(), status: 'NEW', response: '-', conf: '94%' },
-      { id: 'INC-1041', camera: 'Demo Camera', type: 'WEAPON', time: new Date(Date.now() - 3600000).toISOString(), status: 'ACKNOWLEDGED', response: '45s', conf: '91%' },
-      { id: 'INC-1040', camera: 'Demo Camera', type: 'WEAPON', time: new Date(Date.now() - 18000000).toISOString(), status: 'RESOLVED', response: '2m', conf: '88%' },
-    ];
+  constructor(seedData = []) {
+    this.incidents = seedData.map(incident => ({
+      ...incident,
+      evidence: [...(incident.evidence || [])],
+    }));
   }
 
   async findAll() {
@@ -12,19 +11,30 @@ class MockIncidentRepository {
   }
 
   async findById(id) {
-    return this.incidents.find(inc => inc.id === id);
+    return this.incidents.find(incident => incident.id === id) || null;
+  }
+
+  async findBySourceEvent(cameraId, sourceEventId) {
+    return this.incidents.find(incident => (
+      incident.cameraId === cameraId && incident.sourceEventId === sourceEventId
+    )) || null;
   }
 
   async create(data) {
-    const newIncident = {
-      id: `INC-${1000 + this.incidents.length + 1}`,
-      time: new Date().toISOString(),
-      status: 'NEW',
-      response: '-',
-      ...data
-    };
+    const newIncident = { ...data, evidence: [...(data.evidence || [])] };
     this.incidents.unshift(newIncident);
     return newIncident;
+  }
+
+  async appendEvidence(id, evidence, updatedAt) {
+    const incident = await this.findById(id);
+    if (!incident) return null;
+    if (!incident.evidence.some(item => item.id === evidence.id)) {
+      incident.evidence.push(evidence);
+    }
+    incident.evidenceCount = incident.evidence.length;
+    incident.updatedAt = updatedAt;
+    return incident;
   }
 
   async updateStatus(id, status) {

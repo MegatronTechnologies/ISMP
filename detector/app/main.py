@@ -18,6 +18,7 @@ from .yolo_detector import YoloDetector
 detector = YoloDetector(settings)
 stream_service = CameraStreamService(settings, detector)
 control_client = EdgeControlClient(settings, stream_service.status, edge_version=__version__)
+stream_service.set_incident_sink(control_client.submit_detection_evidence)
 
 
 @asynccontextmanager

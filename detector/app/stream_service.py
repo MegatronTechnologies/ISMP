@@ -4,11 +4,12 @@ import platform
 import threading
 import time
 from datetime import datetime, timezone
-from typing import Any, Generator
+from typing import Any, Callable, Generator
 
 import cv2
 
 from .config import CameraSource, Settings
+from .incident_tracker import IncidentTracker
 from .yolo_detector import YoloDetector
 
 
@@ -22,6 +23,8 @@ class CameraStreamService:
     def __init__(self, settings: Settings, detector: YoloDetector) -> None:
         self.settings = settings
         self.detector = detector
+        self.incident_tracker = IncidentTracker(settings)
+        self._incident_sink: Callable[[dict[str, Any]], bool] | None = None
         self._source: CameraSource = settings.camera_source
         self._capture: cv2.VideoCapture | None = None
         self._thread: threading.Thread | None = None
@@ -41,6 +44,9 @@ class CameraStreamService:
         self._actual_width = 0
         self._actual_height = 0
         self._started_at = _utc_now()
+
+    def set_incident_sink(self, sink: Callable[[dict[str, Any]], bool]) -> None:
+        self._incident_sink = sink
 
     def start(self) -> None:
         if self._thread and self._thread.is_alive():
@@ -106,6 +112,7 @@ class CameraStreamService:
             capture.release()
 
     def _set_offline(self, error: str) -> None:
+        self.incident_tracker.mark_absent()
         with self._condition:
             self._camera_state = "OFFLINE"
             self._camera_error = error
@@ -148,6 +155,14 @@ class CameraStreamService:
             if not encode_ok:
                 continue
 
+            jpeg = encoded.tobytes()
+            captured_at = _utc_now()
+            incident_evidence = self.incident_tracker.observe(
+                detections,
+                jpeg,
+                captured_at,
+            )
+
             frame_counter += 1
             elapsed = time.perf_counter() - fps_window_started
             if elapsed >= 1:
@@ -157,15 +172,23 @@ class CameraStreamService:
 
             height, width = annotated.shape[:2]
             with self._condition:
-                self._latest_jpeg = encoded.tobytes()
+                self._latest_jpeg = jpeg
                 self._sequence += 1
-                self._last_frame_at = _utc_now()
+                self._last_frame_at = captured_at
                 self._camera_state = "ONLINE"
                 self._actual_width = width
                 self._actual_height = height
                 self._inference_ms = inference_ms
                 self._detections = detections
                 self._condition.notify_all()
+
+            if self._incident_sink:
+                for evidence in incident_evidence:
+                    try:
+                        self._incident_sink(evidence)
+                    except Exception:
+                        # Incident delivery must never stop camera capture or streaming.
+                        continue
 
         self._release_capture()
 
@@ -233,5 +256,6 @@ class CameraStreamService:
                     "jpegQuality": self.settings.jpeg_quality,
                 },
                 "detections": list(self._detections),
+                "incidentDetection": self.incident_tracker.status(),
                 "heartbeatAt": _utc_now(),
             }
