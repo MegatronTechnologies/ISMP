@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import CentralSyncManager from './components/CentralSyncManager';
+import EmergencyAlertManager from './components/EmergencyAlertManager';
 import { ProtectedRoute, RoleGuard } from './components/ProtectedRoute';
 import Home from './pages/Home';
 import LiveMonitoring from './pages/LiveMonitoring';
@@ -23,6 +25,8 @@ const App = () => {
 
   return (
     <Router>
+      <CentralSyncManager />
+      <EmergencyAlertManager />
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Home />} />

@@ -1,0 +1,577 @@
+.emergency-alert-manager {
+  /* High-level container */
+}
+
+/* ==========================================================================
+   Full Viewport Emergency SOS Overlay
+   ========================================================================== */
+.sos-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(14, 0, 0, 0.92);
+  backdrop-filter: blur(12px);
+  animation: sosBackdropPulse 2s ease-in-out infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@keyframes sosBackdropPulse {
+  0%, 100% {
+    background-color: rgba(18, 0, 2, 0.94);
+  }
+  50% {
+    background-color: rgba(50, 0, 5, 0.95);
+  }
+}
+
+.sos-modal-card {
+  position: relative;
+  width: min(92vw, 680px);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #140507;
+  border: 2px solid #e03a3e;
+  border-radius: 12px;
+  box-shadow: 0 0 50px rgba(224, 58, 62, 0.65), 0 20px 60px rgba(0, 0, 0, 0.85);
+  color: #ffffff;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  animation: sosCardScale 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@keyframes sosCardScale {
+  0% {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.sos-header {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  border-bottom: 1px solid rgba(224, 58, 62, 0.35);
+  padding-bottom: 1.25rem;
+
+  .sos-beacon {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: rgba(224, 58, 62, 0.2);
+    border: 2px solid #e03a3e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #e03a3e;
+    animation: beaconPulse 1.2s ease-in-out infinite;
+    flex-shrink: 0;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  .sos-header-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    .sos-eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #ff6b6b;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .sos-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #ffffff;
+      margin: 0;
+      line-height: 1.2;
+    }
+  }
+}
+
+@keyframes beaconPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(224, 58, 62, 0.7);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 14px rgba(224, 58, 62, 0);
+    transform: scale(1.06);
+  }
+}
+
+.sos-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+
+  .sos-description {
+    font-size: 0.95rem;
+    color: #e2e8f0;
+    line-height: 1.5;
+    margin: 0;
+  }
+}
+
+.sos-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.85rem;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(224, 58, 62, 0.25);
+  border-radius: 8px;
+  padding: 1rem;
+
+  .sos-detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    .label {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .value {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #f8fafc;
+      word-break: break-word;
+
+      &.highlight-red {
+        color: #ff6b6b;
+        font-weight: 700;
+      }
+    }
+  }
+}
+
+.sos-audio-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 0.9rem;
+  background: rgba(224, 58, 62, 0.15);
+  border: 1px solid rgba(224, 58, 62, 0.3);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: #fca5a5;
+
+  .audio-pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #e03a3e;
+    animation: audioDotPulse 0.8s ease-in-out infinite;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+}
+
+@keyframes audioDotPulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.3); }
+}
+
+.sos-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  margin-top: 0.5rem;
+
+  button {
+    flex: 1;
+    min-width: 180px;
+    padding: 0.85rem 1.25rem;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+
+    &:focus-visible {
+      outline: 3px solid #ffffff;
+      outline-offset: 2px;
+    }
+  }
+
+  .btn-sos-live {
+    background: #e03a3e;
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 4px 15px rgba(224, 58, 62, 0.4);
+
+    &:hover {
+      background: #c9302c;
+      transform: translateY(-1px);
+    }
+  }
+
+  .btn-sos-stop {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: #ffffff;
+    }
+  }
+}
+
+/* ==========================================================================
+   Persistent Emergency Active Top Bar
+   ========================================================================== */
+.sos-persistent-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 99999;
+  background: #140507;
+  border-bottom: 2px solid #e03a3e;
+  box-shadow: 0 4px 20px rgba(224, 58, 62, 0.4);
+  padding: 0.65rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: #ffffff;
+  animation: bannerSlideDown 0.25s ease-out;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+
+  .banner-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+
+    .banner-pulse-icon {
+      color: #e03a3e;
+      animation: beaconPulse 1.2s ease-in-out infinite;
+
+      @media (prefers-reduced-motion: reduce) {
+        animation: none;
+      }
+    }
+
+    .banner-text {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+
+      .banner-title {
+        font-weight: 800;
+        font-size: 0.9rem;
+        color: #ff6b6b;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .banner-subtitle {
+        font-size: 0.8rem;
+        color: #cbd5e1;
+      }
+    }
+  }
+
+  .banner-right {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+
+    .btn-banner-live {
+      padding: 0.45rem 0.85rem;
+      border-radius: 4px;
+      background: #e03a3e;
+      color: #ffffff;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      border: none;
+      cursor: pointer;
+
+      &:hover {
+        background: #c9302c;
+      }
+
+      &:focus-visible {
+        outline: 2px solid #ffffff;
+      }
+    }
+
+    .btn-banner-stop {
+      padding: 0.45rem 0.85rem;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: #ffffff;
+      font-size: 0.8rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      cursor: pointer;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.25);
+        border-color: #ffffff;
+      }
+
+      &:focus-visible {
+        outline: 2px solid #ffffff;
+      }
+    }
+  }
+}
+
+@keyframes bannerSlideDown {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(0); }
+}
+
+/* ==========================================================================
+   Compact Authenticated SOS Arming Banner & Control
+   ========================================================================== */
+.sos-arming-banner {
+  background: var(--card-bg, #18191c);
+  border: 1px solid rgba(52, 152, 219, 0.25);
+  border-left: 3px solid #3498db;
+  border-radius: 6px;
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+
+  &.armed {
+    border-color: rgba(46, 204, 113, 0.25);
+    border-left-color: #2ecc71;
+  }
+
+  .arming-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    min-width: 260px;
+
+    .arming-icon {
+      color: #3498db;
+      flex-shrink: 0;
+    }
+
+    .arming-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+
+      .arming-title-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+
+        .arming-title {
+          font-weight: 700;
+          font-size: 0.88rem;
+          color: var(--text-primary, #ffffff);
+        }
+      }
+
+      .arming-desc {
+        font-size: 0.78rem;
+        color: var(--text-secondary, #94a3b8);
+        line-height: 1.35;
+      }
+    }
+  }
+
+  .arming-badges {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+
+    .badge-pill {
+      font-size: 0.72rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+
+      &.badge-granted, &.badge-ready {
+        background: rgba(46, 204, 113, 0.15);
+        color: #2ecc71;
+        border: 1px solid rgba(46, 204, 113, 0.3);
+      }
+
+      &.badge-denied, &.badge-requires-action {
+        background: rgba(231, 76, 60, 0.15);
+        color: #e74c3c;
+        border: 1px solid rgba(231, 76, 60, 0.3);
+      }
+
+      &.badge-unsupported, &.badge-default {
+        background: rgba(149, 165, 166, 0.15);
+        color: #95a5a6;
+        border: 1px solid rgba(149, 165, 166, 0.3);
+      }
+    }
+  }
+
+  .arming-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    .btn-arm-sos {
+      padding: 0.45rem 0.9rem;
+      border-radius: 4px;
+      background: #3498db;
+      color: #ffffff;
+      border: none;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: background 0.15s ease;
+
+      &:hover {
+        background: #2980b9;
+      }
+
+      &:focus-visible {
+        outline: 2px solid #ffffff;
+      }
+    }
+
+    .btn-arm-armed {
+      padding: 0.45rem 0.75rem;
+      border-radius: 4px;
+      background: rgba(46, 204, 113, 0.15);
+      border: 1px solid rgba(46, 204, 113, 0.4);
+      color: #2ecc71;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      cursor: pointer;
+
+      &:hover {
+        background: rgba(46, 204, 113, 0.25);
+      }
+    }
+  }
+}
+
+/* Navbar integration item */
+.navbar-sos-status-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.6rem;
+  border-radius: 4px;
+  background: rgba(224, 58, 62, 0.12);
+  border: 1px solid rgba(224, 58, 62, 0.3);
+  color: #ff6b6b;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &.active-armed {
+    background: rgba(46, 204, 113, 0.12);
+    border-color: rgba(46, 204, 113, 0.3);
+    color: #2ecc71;
+  }
+
+  &:hover {
+    filter: brightness(1.15);
+  }
+}
+
+@media (max-width: 768px) {
+  .sos-modal-card {
+    padding: 1.25rem;
+    gap: 1rem;
+  }
+
+  .sos-header {
+    gap: 0.75rem;
+
+    .sos-beacon {
+      width: 46px;
+      height: 46px;
+    }
+
+    .sos-header-text .sos-title {
+      font-size: 1.25rem;
+    }
+  }
+
+  .sos-actions {
+    flex-direction: column;
+
+    button {
+      width: 100%;
+      min-width: 0;
+    }
+  }
+
+  .sos-persistent-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+
+    .banner-right {
+      width: 100%;
+      justify-content: flex-end;
+    }
+  }
+}
