@@ -206,7 +206,7 @@ const LiveMonitoring = () => {
                   <span className="label">{t('Camera Source')}</span>
                   <span className="value mono">{String(detectorStatus?.camera?.source ?? '—')}</span>
                 </div>
-                <p className="stage-note">{t('Target detections are visual only in stage 1 and do not create incidents.')}</p>
+                <p className="stage-note">{t('When central delivery is configured, confirmed target detections create incidents automatically.')}</p>
               </div>
 
               {isThreatActive && activeIncident && (

@@ -34,11 +34,13 @@ const IncidentDetails = () => {
   const [selectedEvidenceIndex, setSelectedEvidenceIndex] = useState(0);
   const [isLoadingDirect, setIsLoadingDirect] = useState(false);
   const [directFetchError, setDirectFetchError] = useState(null);
+  const [brokenEvidenceImages, setBrokenEvidenceImages] = useState({});
 
   const storeIncident = incidents.find((i) => i.id === id);
 
   useEffect(() => {
     let isCancelled = false;
+    const controller = new AbortController();
 
     const loadDirect = async () => {
       // If not present in store or doesn't have evidence array yet, fetch direct
@@ -46,12 +48,12 @@ const IncidentDetails = () => {
         setIsLoadingDirect(true);
         setDirectFetchError(null);
         try {
-          const directData = await fetchCentralIncidentById(id);
+          const directData = await fetchCentralIncidentById(id, { signal: controller.signal });
           if (!isCancelled && directData) {
             dispatch(upsertSingleRealIncident(directData));
           }
         } catch (err) {
-          if (!isCancelled) {
+          if (!isCancelled && err.name !== 'AbortError') {
             // Only show direct fetch error if we don't already have storeIncident
             if (!storeIncident) {
               setDirectFetchError(err.message || 'Incident not found');
@@ -69,8 +71,14 @@ const IncidentDetails = () => {
 
     return () => {
       isCancelled = true;
+      controller.abort();
     };
   }, [id, dispatch]);
+
+  useEffect(() => {
+    setSelectedEvidenceIndex(0);
+    setBrokenEvidenceImages({});
+  }, [id]);
 
   const incident = storeIncident;
 
@@ -115,6 +123,15 @@ const IncidentDetails = () => {
   const isReal = incident.source === 'YOLO_EDGE';
   const evidenceList = Array.isArray(incident.evidence) ? incident.evidence : [];
   const currentEvidence = evidenceList[selectedEvidenceIndex] || evidenceList[0] || null;
+  const evidenceImageKey = (evidence, index) => evidence?.id || evidence?.url || String(index);
+  const currentEvidenceKey = currentEvidence
+    ? evidenceImageKey(currentEvidence, selectedEvidenceIndex)
+    : null;
+
+  const markEvidenceImageBroken = (evidence, index) => {
+    const key = evidenceImageKey(evidence, index);
+    setBrokenEvidenceImages((previous) => ({ ...previous, [key]: true }));
+  };
 
   const canAcknowledge = user && (user.role === 'USER' || user.role === 'ORGANIZATION_ADMIN' || user.role === 'SUPERADMIN');
   const canResolve = user && (user.role === 'ORGANIZATION_ADMIN' || user.role === 'SUPERADMIN');
@@ -148,30 +165,40 @@ const IncidentDetails = () => {
                   <div className="evidence-main-preview">
                     {currentEvidence && currentEvidence.url ? (
                       <div className="evidence-image-container">
-                        <img
-                          src={resolveEvidenceUrl(currentEvidence.url)}
-                          alt={`Evidence capture for ${incident.id}`}
-                          className="evidence-large-img"
-                        />
-                        <div className="evidence-overlay-bar">
-                          <span className="evidence-index-pill">
-                            <ImageIcon size={14} /> {t('Frame {{current}} of {{total}}', {
-                              current: selectedEvidenceIndex + 1,
-                              total: evidenceList.length,
-                            })}
-                          </span>
-                          {currentEvidence.confidence !== undefined && (
-                            <span className="evidence-conf-pill mono">
-                              {t('Frame Confidence')}: {(Number(currentEvidence.confidence) * 100).toFixed(0)}%
-                            </span>
-                          )}
-                          {currentEvidence.timestamp && (
-                            <span className="evidence-time-pill">
-                              <Clock size={12} />
-                              {new Date(currentEvidence.timestamp).toLocaleTimeString(locale)}
-                            </span>
-                          )}
-                        </div>
+                        {brokenEvidenceImages[currentEvidenceKey] ? (
+                          <div className="evidence-image-fallback">
+                            <ImageIcon size={36} />
+                            <span>{t('Evidence image unavailable')}</span>
+                          </div>
+                        ) : (
+                          <>
+                            <img
+                              src={resolveEvidenceUrl(currentEvidence.url)}
+                              alt={t('Evidence capture for incident {{id}}', { id: incident.id })}
+                              className="evidence-large-img"
+                              onError={() => markEvidenceImageBroken(currentEvidence, selectedEvidenceIndex)}
+                            />
+                            <div className="evidence-overlay-bar">
+                              <span className="evidence-index-pill">
+                                <ImageIcon size={14} /> {t('Frame {{current}} of {{total}}', {
+                                  current: selectedEvidenceIndex + 1,
+                                  total: evidenceList.length,
+                                })}
+                              </span>
+                              {currentEvidence.confidence !== undefined && (
+                                <span className="evidence-conf-pill mono">
+                                  {t('Frame Confidence')}: {(Number(currentEvidence.confidence) * 100).toFixed(0)}%
+                                </span>
+                              )}
+                              {currentEvidence.capturedAt && (
+                                <span className="evidence-time-pill">
+                                  <Clock size={12} />
+                                  {new Date(currentEvidence.capturedAt).toLocaleTimeString(locale)}
+                                </span>
+                              )}
+                            </div>
+                          </>
+                        )}
                       </div>
                     ) : (
                       <div className="video-player">
@@ -192,6 +219,7 @@ const IncidentDetails = () => {
                       <div className="thumbs">
                         {evidenceList.map((ev, idx) => {
                           const isSelected = idx === selectedEvidenceIndex;
+                          const imageKey = evidenceImageKey(ev, idx);
                           return (
                             <button
                               key={ev.id || idx}
@@ -200,12 +228,13 @@ const IncidentDetails = () => {
                               onClick={() => setSelectedEvidenceIndex(idx)}
                               title={t('Select Frame {{number}}', { number: idx + 1 })}
                             >
-                              {ev.url ? (
+                              {ev.url && !brokenEvidenceImages[imageKey] ? (
                                 <img
                                   src={resolveEvidenceUrl(ev.url)}
-                                  alt={`Thumb ${idx + 1}`}
+                                  alt={t('Evidence thumbnail {{number}}', { number: idx + 1 })}
                                   className="thumb-img"
                                   loading="lazy"
+                                  onError={() => markEvidenceImageBroken(ev, idx)}
                                 />
                               ) : (
                                 <div className="thumb-fallback">
@@ -261,7 +290,7 @@ const IncidentDetails = () => {
                 {incident.cameraScope && (
                   <div className="meta-row">
                     <span className="label"><MapPin size={16}/> {t('Scope')}</span>
-                    <span className="value mono">{incident.cameraScope}</span>
+                    <span className="value mono">{t(incident.cameraScope)}</span>
                   </div>
                 )}
                 {incident.organizationId && (
@@ -312,7 +341,7 @@ const IncidentDetails = () => {
                       <strong>{t('Edge AI Control Plane')}</strong>
                     </div>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-                      {t('This incident was created autonomously by the YOLO Edge AI detector. Status transitions are synchronized via central server telemetry.')}
+                      {t('This incident is read-only. Status changes will become available after the authenticated central workflow API is implemented.')}
                     </p>
                   </div>
                 ) : (
@@ -356,8 +385,13 @@ const IncidentDetails = () => {
                   </p>
                   {isReal && evidenceList.length > 0 && (
                     <p className="history-item">
-                      <span className="time">{new Date(evidenceList[0].timestamp || incident.startedAt).toLocaleTimeString(locale)}</span>
-                      <span>{t('Ingested {{count}} evidence frames', { count: evidenceList.length })}</span>
+                      <span className="time">{new Date(evidenceList[0].capturedAt || incident.startedAt).toLocaleTimeString(locale)}</span>
+                      <span>{t(
+                        evidenceList.length === 1
+                          ? 'Ingested {{count}} evidence frame'
+                          : 'Ingested {{count}} evidence frames',
+                        { count: evidenceList.length },
+                      )}</span>
                     </p>
                   )}
                   {incident.acknowledgedAt && (

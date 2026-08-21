@@ -80,6 +80,7 @@ const Incidents = () => {
   }, [incidents, statusFilter, sourceFilter, searchQuery]);
 
   const realIncidentsCount = incidents.filter((i) => i.source === 'YOLO_EDGE').length;
+  const simulatedIncidentsCount = incidents.length - realIncidentsCount;
 
   return (
     <Layout>
@@ -94,9 +95,10 @@ const Incidents = () => {
                 <span className="sync-text">
                   {syncError 
                     ? t('Sync Warning: Showing cached incidents') 
-                    : t('{{count}} Central Incidents ({{real}} Edge AI)', { 
-                        count: incidents.length, 
-                        real: realIncidentsCount 
+                    : t('{{total}} incidents ({{central}} central, {{simulated}} simulated)', {
+                        total: incidents.length,
+                        central: realIncidentsCount,
+                        simulated: simulatedIncidentsCount,
                       })
                   }
                 </span>
@@ -241,7 +243,7 @@ const Incidents = () => {
                               {hasImage ? (
                                 <img 
                                   src={resolveEvidenceUrl(firstEvidence.url)} 
-                                  alt={`Evidence for ${inc.id}`}
+                                  alt={t('Evidence for incident {{id}}', { id: inc.id })}
                                   className="incident-thumb-img"
                                   onError={() => handleImageError(inc.id)}
                                   loading="lazy"
@@ -252,7 +254,13 @@ const Incidents = () => {
                                 </div>
                               )}
                               {evidenceCount > 0 && (
-                                <span className="evidence-count-badge" title={t('{{count}} Evidence captures', { count: evidenceCount })}>
+                                <span
+                                  className="evidence-count-badge"
+                                  title={t(
+                                    evidenceCount === 1 ? '{{count}} Evidence capture' : '{{count}} Evidence captures',
+                                    { count: evidenceCount },
+                                  )}
+                                >
                                   {evidenceCount}
                                 </span>
                               )}
@@ -282,7 +290,7 @@ const Incidents = () => {
                           <td>
                             <span className="evidence-summary-text">
                               {isReal 
-                                ? t('{{count}} captures', { count: evidenceCount }) 
+                                ? t(evidenceCount === 1 ? '{{count}} capture' : '{{count}} captures', { count: evidenceCount })
                                 : inc.responseTime || '-'
                               }
                             </span>
@@ -312,7 +320,7 @@ const Incidents = () => {
                         {hasImage ? (
                           <img 
                             src={resolveEvidenceUrl(firstEvidence.url)} 
-                            alt={`Evidence for ${inc.id}`}
+                            alt={t('Evidence for incident {{id}}', { id: inc.id })}
                             className="grid-thumb-img"
                             onError={() => handleImageError(inc.id)}
                             loading="lazy"
@@ -332,12 +340,15 @@ const Incidents = () => {
                             {isReal ? t('Edge AI') : t('Simulated')}
                           </span>
                         </div>
-                        {evidenceCount > 0 && (
-                          <div className="evidence-overlay">
-                            <span className="evidence-pill">
-                              <ImageIcon size={12} /> {t('{{count}} frames', { count: evidenceCount })}
-                            </span>
-                          </div>
+                          {evidenceCount > 0 && (
+                            <div className="evidence-overlay">
+                              <span className="evidence-pill">
+                                <ImageIcon size={12} /> {t(
+                                  evidenceCount === 1 ? '{{count}} frame' : '{{count}} frames',
+                                  { count: evidenceCount },
+                                )}
+                              </span>
+                            </div>
                         )}
                       </div>
                       <div className="card-body">
