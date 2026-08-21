@@ -1,17 +1,93 @@
-# Python Detector (Future)
+# ISMP Edge Stream Service
 
-This directory will contain the edge device logic.
+[Русская инструкция](README.ru.md)
 
-**Tech Stack:**
-- Python 3.10+
-- YOLOv8
-- OpenCV
-- requests
+`detector/` is a standalone camera server. It does not import or run any code
+from the ISMP frontend or Node.js backend and can be copied to a Windows laptop
+by itself.
 
-## State Machine
-The detector will operate on the following states:
+The only integration point is the versioned HTTP API documented in
+[API.md](API.md):
 
-- `IDLE`: Normal operation, analyzing frames.
-- `DETECTING`: Threat identified, verifying confidence.
-- `GRACE_PERIOD`: Threat disappeared, waiting before stopping recording.
-- `RECORDING_COMPLETE`: Grace period expired, saving video and uploading to backend.
+`camera -> OpenCV -> YOLOv8 -> annotated MJPEG + JSON status API`
+
+Stage 1 detects only COCO class `39` (`bottle`). Detections are visual and do
+not create incidents or alerts yet.
+
+## Requirements
+
+- Windows 10/11 x64
+- Python 3.12 x64 with the Python launcher or `python` available in `PATH`
+- A built-in or USB webcam
+- Internet access during the first installation and first model download
+
+Node.js, the website, and the ISMP databases are not required by this folder.
+
+## Download only this folder
+
+Git sparse checkout downloads the repository metadata and materializes only
+the edge-server directory:
+
+```powershell
+git clone --filter=blob:none --sparse https://github.com/MegatronTechnologies/ISMP.git
+Set-Location ISMP
+git sparse-checkout set detector
+Set-Location detector
+```
+
+Alternatively, download the repository ZIP from GitHub and keep only the
+`detector` folder.
+
+## Install and run on Windows
+
+Open PowerShell inside the downloaded `detector` folder:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup_windows.ps1
+powershell -ExecutionPolicy Bypass -File .\run_windows.ps1
+```
+
+You may also double-click `install_windows.cmd` once and then
+`start_windows.cmd` whenever the camera server is needed.
+
+The installation script creates an isolated `.venv`, installs the pinned
+packages from `requirements.txt`, and creates `.env` from `.env.example`.
+The first service start downloads `yolov8n.pt` into this folder.
+
+Open these URLs while the service is running:
+
+- Health: <http://127.0.0.1:8001/api/v1/health>
+- Status: <http://127.0.0.1:8001/api/v1/status>
+- Video: <http://127.0.0.1:8001/api/v1/stream.mjpg>
+- API docs: <http://127.0.0.1:8001/docs>
+
+Press `Ctrl+C` in the service window to stop it and release the camera.
+
+## Configuration
+
+Edit `.env` after installation:
+
+- `ISMP_CAMERA_SOURCE=0` selects the usual built-in/front camera.
+- Use `1`, `2`, and so on for another local camera.
+- An RTSP URL can be used later without changing Python code.
+- `ISMP_CAMERA_BACKEND=AUTO` tries MSMF, DirectShow, and OpenCV default.
+- `ISMP_YOLO_MODEL` selects the current or future custom `.pt` model.
+- `ISMP_YOLO_CLASSES` is a comma-separated list of model class IDs.
+- `ISMP_ALLOWED_ORIGINS` contains the website origins allowed to read status.
+
+## Website independence
+
+The website consumes the API; this service never imports the website and the
+website never imports Python files. Frontend changes are safe as long as the
+`/api/v1` contract remains supported.
+
+For the current local demo, the website and this service are opened on the same
+Windows laptop. The service intentionally binds to `127.0.0.1`. Publishing a
+camera over a LAN or the internet will be a later authenticated relay stage;
+do not expose port `8001` publicly without access control and TLS.
+
+## Developer checks
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```

@@ -1,17 +1,25 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { Camera, Maximize2, ShieldAlert, Activity, Wifi, WifiOff } from 'lucide-react';
+import { Maximize2, ShieldAlert, WifiOff } from 'lucide-react';
 import { getLocale } from '../utils/dateHelper';
+import { fetchDetectorStatus, getDetectorStreamUrl } from '../services/detectorApi';
 import Layout from '../components/Layout';
 import './LiveMonitoring.scss';
 
 const LiveMonitoring = () => {
   const { t, i18n } = useTranslation();
-  const { isThreatActive, demoCameraStatus } = useSelector(state => state.simulation);
+  const { isThreatActive } = useSelector(state => state.simulation);
   const { incidents } = useSelector(state => state.incidents);
   const [timeStr, setTimeStr] = useState(new Date().toLocaleTimeString());
+  const [detectorStatus, setDetectorStatus] = useState(null);
+  const [detectorReachable, setDetectorReachable] = useState(false);
+  const [streamReady, setStreamReady] = useState(false);
+  const [streamNonce, setStreamNonce] = useState(Date.now());
+  const [connectionError, setConnectionError] = useState(null);
+  const feedRef = useRef(null);
+  const retryTimerRef = useRef(null);
   const locale = getLocale(i18n.language);
 
   useEffect(() => {
@@ -20,6 +28,60 @@ const LiveMonitoring = () => {
     }, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const refreshStatus = async () => {
+      try {
+        const nextStatus = await fetchDetectorStatus();
+        if (!mounted) return;
+        setDetectorStatus(nextStatus);
+        setDetectorReachable(true);
+        setConnectionError(null);
+      } catch (error) {
+        if (!mounted) return;
+        setDetectorReachable(false);
+        setStreamReady(false);
+        setConnectionError(error.message);
+      }
+    };
+
+    refreshStatus();
+    const interval = setInterval(refreshStatus, 1000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => () => {
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+  }, []);
+
+  const cameraOnline = detectorReachable && detectorStatus?.camera?.state === 'ONLINE';
+  const detectorReady = detectorStatus?.detector?.state === 'READY';
+  const detections = detectorStatus?.detections || [];
+  const detectionCount = detections.length;
+  const detectedLabel = detections[0]?.label || 'bottle';
+  const cameraName = detectorStatus?.camera?.name || t('Main Gate (Cam-01)');
+  const captureFps = detectorStatus?.camera?.captureFps || 0;
+  const inferenceMs = detectorStatus?.detector?.inferenceMs || 0;
+  const resolution = detectorStatus?.camera?.width && detectorStatus?.camera?.height
+    ? `${detectorStatus.camera.width}×${detectorStatus.camera.height}`
+    : '—';
+
+  const handleStreamError = () => {
+    setStreamReady(false);
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    retryTimerRef.current = setTimeout(() => setStreamNonce(Date.now()), 2000);
+  };
+
+  const openFullscreen = () => {
+    if (feedRef.current?.requestFullscreen) {
+      feedRef.current.requestFullscreen();
+    }
+  };
 
   const activeIncident = incidents.find(i => i.status !== 'RESOLVED' && i.status !== 'FALSE_POSITIVE');
 
@@ -30,58 +92,63 @@ const LiveMonitoring = () => {
           <div className="page-header d-flex justify-between align-center" style={{marginBottom: '1.5rem'}}>
             <h2>{t('Live Feed')}</h2>
             <div className="view-controls">
-              <button className="btn btn-outline btn-sm"><Maximize2 size={16}/></button>
+              <button className="btn btn-outline btn-sm" onClick={openFullscreen} title={t('Fullscreen')}>
+                <Maximize2 size={16}/>
+              </button>
             </div>
           </div>
 
           <div className="monitoring-layout">
             <div className="main-feed">
-              <div className={`video-container ${isThreatActive ? 'alert' : ''}`}>
+              <div ref={feedRef} className={`video-container ${isThreatActive ? 'alert' : ''}`}>
                 <div className="video-placeholder">
-                  {demoCameraStatus === 'ONLINE' ? (
-                    <div className="grid-pattern"></div>
-                  ) : (
+                  {!streamReady && (
                     <div className="offline-state">
                       <WifiOff size={48} />
-                      <p>{t('NO SIGNAL')}</p>
+                      <p>{cameraOnline ? t('Connecting to camera stream') : t('NO SIGNAL')}</p>
+                      <span>{connectionError || detectorStatus?.camera?.error || t('Start the edge detector service')}</span>
                     </div>
                   )}
                 </div>
 
-                {demoCameraStatus === 'ONLINE' && (
+                {detectorReachable && (
+                  <img
+                    key={streamNonce}
+                    className={`stream-frame ${streamReady ? 'visible' : ''}`}
+                    src={getDetectorStreamUrl(streamNonce)}
+                    alt={t('Real camera stream')}
+                    onLoad={() => setStreamReady(true)}
+                    onError={handleStreamError}
+                  />
+                )}
+
+                {streamReady && (
                   <>
                     <div className="hud-overlay top-left">
                       <div className="rec-badge">
                         <span className="dot"></span>
                         <span>REC</span>
                       </div>
-                      <div className="camera-name">{t('Main Gate (Cam-01)')}</div>
+                      <div className="camera-name">{cameraName}</div>
                     </div>
 
                     <div className="hud-overlay top-right">
-                      <span className={`status ${demoCameraStatus === 'ONLINE' ? 'online' : 'offline'}`}>
-                        {t(demoCameraStatus)}
+                      <span className={`status ${cameraOnline ? 'online' : 'offline'}`}>
+                        {t(cameraOnline ? 'ONLINE' : 'OFFLINE')}
                       </span>
-                      <div className="quality">1080P | 30FPS</div>
+                      <div className="quality">{resolution} | {captureFps.toFixed(1)} FPS</div>
                     </div>
 
                     <div className="hud-overlay bottom-left">
                       <div className="timestamp">{timeStr}</div>
-                      <div className="engine">YOLOv8 Edge · 12ms</div>
+                      <div className="engine">
+                        {detectorReady ? `YOLOv8 Edge · ${inferenceMs.toFixed(1)}ms` : t('YOLO model is loading')}
+                      </div>
                     </div>
 
                     <div className="hud-overlay bottom-right">
-                      <div className="latency">LATENCY: 12ms</div>
+                      <div className="latency">{t('Inference')}: {inferenceMs.toFixed(1)}ms</div>
                     </div>
-
-                    {isThreatActive && (
-                      <div className="bounding-box weapon">
-                        <span className="label">
-                          <ShieldAlert size={12} style={{marginRight: '4px', verticalAlign: 'middle'}} />
-                          {t('WEAPON')} 94%
-                        </span>
-                      </div>
-                    )}
                   </>
                 )}
               </div>
@@ -111,24 +178,35 @@ const LiveMonitoring = () => {
                 <h3>{t('System Status')}</h3>
                 <div className="status-item">
                   <span className="label">{t('Camera Health')}</span>
-                  <span className={`value ${demoCameraStatus === 'ONLINE' ? 'online' : 'offline'}`}>
-                    {t(demoCameraStatus)}
+                  <span className={`value ${cameraOnline ? 'online' : 'offline'}`}>
+                    {t(cameraOnline ? 'ONLINE' : 'OFFLINE')}
                   </span>
                 </div>
                 <div className="status-item">
                   <span className="label">{t('Detection Engine')}</span>
-                  <span className="value">YOLOv8 Edge</span>
+                  <span className={`value ${detectorReady ? 'online' : ''}`}>
+                    {t(detectorStatus?.detector?.state || 'DISCONNECTED')}
+                  </span>
                 </div>
                 <div className="status-item">
                   <span className="label">{t('Detection State')}</span>
-                  <span className={`value ${isThreatActive ? 'error' : 'online'}`}>
-                    {isThreatActive ? t('Active Threat') : t('No Active Threat')}
+                  <span className={`value ${detectionCount > 0 ? 'error' : 'online'}`}>
+                    {detectionCount > 0
+                      ? t('Target object detected', { count: detectionCount, label: t(detectedLabel) })
+                      : t('No target objects')}
                   </span>
                 </div>
                 <div className="status-item">
                   <span className="label">{t('Last Heartbeat')}</span>
-                  <span className="value">12ms ago</span>
+                  <span className="value">
+                    {detectorReachable ? new Date(detectorStatus?.heartbeatAt).toLocaleTimeString(locale) : '—'}
+                  </span>
                 </div>
+                <div className="status-item">
+                  <span className="label">{t('Camera Source')}</span>
+                  <span className="value mono">{String(detectorStatus?.camera?.source ?? '—')}</span>
+                </div>
+                <p className="stage-note">{t('Target detections are visual only in stage 1 and do not create incidents.')}</p>
               </div>
 
               {isThreatActive && activeIncident && (
