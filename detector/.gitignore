@@ -1,0 +1,12 @@
+.env
+.venv/
+Ultralytics/
+.matplotlib/
+__pycache__/
+*.py[cod]
+*.pt
+*.onnx
+runs/
+*.avi
+*.mkv
+*.mp4
