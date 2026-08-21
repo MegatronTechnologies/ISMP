@@ -44,9 +44,10 @@ const App = () => {
 
         {/* Organization Admin Routes */}
         <Route element={<RoleGuard allowedRoles={['ORGANIZATION_ADMIN', 'SUPERADMIN']} />}>
+          <Route path="/org-admin/analytics" element={<AdminPanelPage title="Analytics" sectionKey="analytics" />} />
+          <Route path="/org-admin/cameras" element={<AdminPanelPage title="Organization Cameras" sectionKey="cameras" />} />
           <Route path="/org-admin/users" element={<AdminPanelPage title="Organization Users" sectionKey="org-users" />} />
           <Route path="/org-admin/registration-requests" element={<AdminPanelPage title="Registration Requests" sectionKey="registration-requests" />} />
-          <Route path="/org-admin/analytics" element={<AdminPanelPage title="Analytics" sectionKey="analytics" />} />
           <Route path="/org-admin/audit-log" element={<AdminPanelPage title="Organization Audit Log" sectionKey="audit-log" />} />
         </Route>
 

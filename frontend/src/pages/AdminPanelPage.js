@@ -22,6 +22,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import Layout from '../components/Layout';
+import CentralCameraRegistry from '../components/CentralCameraRegistry';
 import './AdminPanelPage.scss';
 
 const AdminPanelPage = ({ title, sectionKey }) => {
@@ -38,6 +39,7 @@ const AdminPanelPage = ({ title, sectionKey }) => {
   // Navigation items for Organization Admin
   const orgNavItems = [
     { key: 'analytics', label: t('Analytics'), path: '/org-admin/analytics', icon: BarChart3, count: '3 active metrics' },
+    { key: 'cameras', label: t('Organization Cameras'), path: '/org-admin/cameras', icon: Camera, count: t('Central Control Plane') },
     { key: 'users', label: t('Users'), path: '/org-admin/users', icon: Users, count: '14 staff members' },
     { key: 'registration-requests', label: t('Registration Requests'), path: '/org-admin/registration-requests', icon: UserPlus, count: '2 pending' },
     { key: 'audit-log', label: t('Audit Log'), path: '/org-admin/audit-log', icon: FileText, count: '128 events logged' }
@@ -49,7 +51,7 @@ const AdminPanelPage = ({ title, sectionKey }) => {
     { key: 'organizations', label: t('Organizations Management'), path: '/admin/organizations', icon: Building2, count: '8 registered' },
     { key: 'users', label: t('Global Users'), path: '/admin/users', icon: Users, count: '142 users' },
     { key: 'organization-admins', label: t('Org Admins'), path: '/admin/organization-admins', icon: UserCheck, count: '16 administrators' },
-    { key: 'cameras', label: t('Global Cameras'), path: '/admin/cameras', icon: Camera, count: '34 connected' },
+    { key: 'cameras', label: t('Global Cameras'), path: '/admin/cameras', icon: Camera, count: t('Central Control Plane') },
     { key: 'incidents', label: t('All Incidents'), path: '/admin/incidents', icon: ShieldAlert, count: `${incidents.length} total` },
     { key: 'contact-requests', label: t('Contact Requests'), path: '/admin/contact-requests', icon: Inbox, count: '5 new' },
     { key: 'audit-logs', label: t('Global Audit Logs'), path: '/admin/audit-logs', icon: FileText, count: '1,420 events' },
@@ -145,48 +147,7 @@ const AdminPanelPage = ({ title, sectionKey }) => {
         );
 
       case 'cameras':
-        return (
-          <div className="admin-table-container">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Camera ID</th>
-                  <th>Location / Sector</th>
-                  <th>RTSP Stream URL</th>
-                  <th>AI Detection Model</th>
-                  <th>Feed Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><strong>CAM-01</strong></td>
-                  <td>Main School Gate (Entrance North)</td>
-                  <td><code>rtsp://stream.ismp.internal/live/cam01</code></td>
-                  <td>ISMP Threat-v2 (YOLOv8)</td>
-                  <td>
-                    <span className={`status-badge ${demoCameraStatus === 'ONLINE' ? 'status-active' : 'status-offline'}`}>
-                      {demoCameraStatus}
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td><strong>CAM-02</strong></td>
-                  <td>East Perimeter Courtyard</td>
-                  <td><code>rtsp://stream.ismp.internal/live/cam02</code></td>
-                  <td>ISMP Threat-v2 (YOLOv8)</td>
-                  <td><span className="status-badge status-active">ONLINE</span></td>
-                </tr>
-                <tr>
-                  <td><strong>CAM-03</strong></td>
-                  <td>South Sports Hall & Hallway</td>
-                  <td><code>rtsp://stream.ismp.internal/live/cam03</code></td>
-                  <td>ISMP Threat-v2 (YOLOv8)</td>
-                  <td><span className="status-badge status-active">ONLINE</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        );
+        return <CentralCameraRegistry orgFilter={isSuperAdmin ? null : (user?.organizationId || null)} />;
 
       case 'audit-log':
       case 'audit-logs':
@@ -371,8 +332,12 @@ const AdminPanelPage = ({ title, sectionKey }) => {
           {/* Section Specific Live Content Preview */}
           <div className="admin-content-section">
             <div className="content-section-header">
-              <h3>{t(title)} — {t('Simulated Backend Record')}</h3>
-              <span className="badge badge-info">{t('Live Demo Metrics')}</span>
+              <h3>
+                {t(title)} — {sectionKey === 'cameras' ? t('Central Control Plane') : t('Simulated Backend Record')}
+              </h3>
+              <span className="badge badge-info">
+                {sectionKey === 'cameras' ? t('Real Central Registry') : t('Live Demo Metrics')}
+              </span>
             </div>
             {renderSectionSpecificPreview()}
           </div>

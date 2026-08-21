@@ -137,6 +137,9 @@ const Navbar = () => {
                       <Link to="/org-admin/analytics" className="dropdown-item">
                         <BarChart3 size={15} /> {t('Analytics')}
                       </Link>
+                      <Link to="/org-admin/cameras" className="dropdown-item">
+                        <Camera size={15} /> {t('Cameras')}
+                      </Link>
                       <Link to="/org-admin/users" className="dropdown-item">
                         <Users size={15} /> {t('Users')}
                       </Link>
