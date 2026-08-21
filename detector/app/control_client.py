@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import base64
 import json
 import os
 import platform
+import queue
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
+from urllib.parse import quote
 from urllib.request import Request, urlopen
 from uuid import uuid4
 
@@ -38,13 +41,22 @@ class EdgeControlClient:
         self.edge_version = edge_version
         self._identity: dict[str, str | None] | None = None
         self._thread: threading.Thread | None = None
+        self._event_thread: threading.Thread | None = None
         self._stop_event = threading.Event()
         self._lock = threading.RLock()
+        self._auth_lock = threading.RLock()
+        self._event_queue: queue.Queue[dict[str, Any]] = queue.Queue(
+            maxsize=settings.incident_event_queue_size
+        )
         self._state = "STARTING"
         self._error: str | None = None
         self._last_attempt_at: str | None = None
         self._last_success_at: str | None = None
         self._consecutive_failures = 0
+        self._delivered_incident_evidence = 0
+        self._dropped_incident_evidence = 0
+        self._last_incident_success_at: str | None = None
+        self._last_incident_error: str | None = None
 
     @property
     def enabled(self) -> bool:
@@ -67,11 +79,19 @@ class EdgeControlClient:
             daemon=True,
         )
         self._thread.start()
+        self._event_thread = threading.Thread(
+            target=self._event_loop,
+            name="ismp-incident-delivery",
+            daemon=True,
+        )
+        self._event_thread.start()
 
     def stop(self) -> None:
         self._stop_event.set()
         if self._thread:
             self._thread.join(timeout=self.settings.central_timeout_seconds + 2)
+        if self._event_thread:
+            self._event_thread.join(timeout=self.settings.central_timeout_seconds + 2)
         with self._lock:
             if self._state != "DISABLED":
                 self._state = "STOPPED"
@@ -96,23 +116,20 @@ class EdgeControlClient:
         if not self.enabled:
             raise EdgeApiError("Central enrollment is not configured")
 
-        identity = self._ensure_identity()
         with self._lock:
             self._last_attempt_at = _utc_now()
 
-        if not identity.get("deviceToken"):
-            self._register(identity)
+        camera_id, device_token = self._device_credentials()
 
         try:
             response = self._post_json(
-                f"/edge/cameras/{identity['cameraId']}/heartbeat",
+                f"/edge/cameras/{camera_id}/heartbeat",
                 self.status_provider(),
-                {"Authorization": f"Bearer {identity['deviceToken']}"},
+                {"Authorization": f"Bearer {device_token}"},
             )
         except EdgeApiError as exc:
             if exc.status_code in {401, 404}:
-                identity["deviceToken"] = None
-                self._save_identity(identity)
+                self._invalidate_device_token(device_token)
             raise
 
         with self._lock:
@@ -120,6 +137,98 @@ class EdgeControlClient:
             self._error = None
             self._last_success_at = response.get("camera", {}).get("lastHeartbeatAt") or _utc_now()
             self._consecutive_failures = 0
+
+    def submit_detection_evidence(self, evidence: dict[str, Any]) -> bool:
+        if not self.enabled:
+            with self._lock:
+                self._dropped_incident_evidence += 1
+                self._last_incident_error = "Central enrollment is not configured"
+            return False
+        try:
+            self._event_queue.put_nowait(evidence)
+            return True
+        except queue.Full:
+            with self._lock:
+                self._dropped_incident_evidence += 1
+                self._last_incident_error = "Incident delivery queue is full"
+            return False
+
+    def _event_loop(self) -> None:
+        while not self._stop_event.is_set():
+            try:
+                evidence = self._event_queue.get(timeout=0.5)
+            except queue.Empty:
+                continue
+
+            delivered = False
+            for attempt in range(1, self.settings.incident_event_max_attempts + 1):
+                if self._stop_event.is_set():
+                    break
+                try:
+                    self._deliver_detection_evidence(evidence)
+                    delivered = True
+                    with self._lock:
+                        self._delivered_incident_evidence += 1
+                        self._last_incident_success_at = _utc_now()
+                        self._last_incident_error = None
+                    break
+                except EdgeApiError as exc:
+                    with self._lock:
+                        self._last_incident_error = str(exc)
+                    if attempt < self.settings.incident_event_max_attempts:
+                        self._stop_event.wait(self.settings.incident_event_retry_seconds)
+                except Exception as exc:  # keep capture alive on any delivery failure
+                    with self._lock:
+                        self._last_incident_error = str(exc)
+                    if attempt < self.settings.incident_event_max_attempts:
+                        self._stop_event.wait(self.settings.incident_event_retry_seconds)
+
+            if not delivered:
+                with self._lock:
+                    self._dropped_incident_evidence += 1
+            self._event_queue.task_done()
+
+    def _deliver_detection_evidence(self, evidence: dict[str, Any]) -> dict[str, Any]:
+        camera_id, device_token = self._device_credentials()
+        detection = evidence["detection"]
+        encoded_label = base64.urlsafe_b64encode(
+            str(detection["label"]).encode("utf-8")
+        ).decode("ascii").rstrip("=")
+        path = (
+            f"/edge/cameras/{quote(camera_id, safe='')}/detection-events/"
+            f"{quote(str(evidence['eventId']), safe='')}/evidence"
+        )
+        headers = {
+            "Authorization": f"Bearer {device_token}",
+            "Content-Type": "image/jpeg",
+            "X-ISMP-Capture-ID": str(evidence["captureId"]),
+            "X-ISMP-Captured-At": str(evidence["capturedAt"]),
+            "X-ISMP-Detection-Class-ID": str(detection["classId"]),
+            "X-ISMP-Detection-Label-B64": encoded_label,
+            "X-ISMP-Detection-Confidence": str(detection["confidence"]),
+            "X-ISMP-Detection-Box": json.dumps(detection["box"], separators=(",", ":")),
+            "X-ISMP-Detection-Present": "true" if evidence.get("detectionPresent", True) else "false",
+        }
+        try:
+            return self._post_jpeg(path, evidence["jpeg"], headers)
+        except EdgeApiError as exc:
+            if exc.status_code in {401, 404}:
+                self._invalidate_device_token(device_token)
+            raise
+
+    def _device_credentials(self) -> tuple[str, str]:
+        with self._auth_lock:
+            identity = self._ensure_identity()
+            if not identity.get("deviceToken"):
+                self._register(identity)
+            return str(identity["cameraId"]), str(identity["deviceToken"])
+
+    def _invalidate_device_token(self, rejected_token: str) -> None:
+        with self._auth_lock:
+            identity = self._ensure_identity()
+            if identity.get("deviceToken") == rejected_token:
+                identity["deviceToken"] = None
+                self._save_identity(identity)
 
     def _register(self, identity: dict[str, str | None]) -> None:
         with self._lock:
@@ -204,6 +313,33 @@ class EdgeControlClient:
         except (ValueError, UnicodeDecodeError) as exc:
             raise EdgeApiError("Central API returned invalid JSON") from exc
 
+    def _post_jpeg(
+        self,
+        path: str,
+        jpeg: bytes,
+        headers: dict[str, str],
+    ) -> dict[str, Any]:
+        request = Request(
+            f"{self.settings.central_api_url}{path}",
+            data=jpeg,
+            method="POST",
+            headers=headers,
+        )
+        try:
+            with urlopen(request, timeout=self.settings.central_timeout_seconds) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except HTTPError as exc:
+            try:
+                body = json.loads(exc.read().decode("utf-8"))
+                message = body.get("message") or body.get("error") or str(exc)
+            except (ValueError, UnicodeDecodeError):
+                message = str(exc)
+            raise EdgeApiError(f"Central API HTTP {exc.code}: {message}", exc.code) from exc
+        except URLError as exc:
+            raise EdgeApiError(f"Central API unavailable: {exc.reason}") from exc
+        except (ValueError, UnicodeDecodeError) as exc:
+            raise EdgeApiError("Central API returned invalid JSON") from exc
+
     def status(self) -> dict[str, Any]:
         with self._lock:
             camera_id = self._identity.get("cameraId") if self._identity else None
@@ -215,4 +351,11 @@ class EdgeControlClient:
                 "lastSuccessAt": self._last_success_at,
                 "consecutiveFailures": self._consecutive_failures,
                 "error": self._error,
+                "incidentDelivery": {
+                    "pendingEvidence": self._event_queue.qsize(),
+                    "deliveredEvidence": self._delivered_incident_evidence,
+                    "droppedEvidence": self._dropped_incident_evidence,
+                    "lastSuccessAt": self._last_incident_success_at,
+                    "error": self._last_incident_error,
+                },
             }

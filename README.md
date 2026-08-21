@@ -65,8 +65,9 @@ in [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Strict Simulation Workflow:** The "Simulate Threat" feature triggers a full mocked workflow (Incident creation, Notification dispatch, Audit Logging, and Dashboard statistics updates) using strict Redux Thunks. Workflows enforce real-world RBAC progression (NEW -> ACKNOWLEDGED -> RESOLVED).
 - **Role-Based Access Control:** Frontend routes are protected by `ProtectedRoute` and `RoleGuard` components, simulating USER, ORGANIZATION_ADMIN, and SUPERADMIN access levels.
 - **Advanced Dashboard:** Accurate 24h event calculations and dynamic response times based on incident historical timestamps.
-- **Real Edge Stream MVP:** A standalone Windows camera service publishes YOLOv8-annotated MJPEG, health, status, and detection telemetry to Live Monitoring. Stage 1 targets bottles only and does not create incidents.
+- **Real Edge Incident MVP:** A standalone Windows camera service publishes YOLOv8-annotated MJPEG and turns confirmed bottle detections into authenticated central incidents, notifications, and three timed evidence frames.
 - **Camera Control Plane:** Edge cameras securely enroll for per-device tokens and send authenticated health heartbeats to the central Node.js backend.
+- **Noise Control:** Incident creation requires 3 positive frames in 2 seconds, rearms after 3 seconds without the target, and enforces a configurable 30-second minimum cooldown.
 
 **Future Features (Not Yet Implemented):**
 - **Custom Weapon Model:** Replace the temporary bottle-only YOLOv8 model with the trained weapon model.

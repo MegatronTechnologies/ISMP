@@ -9,10 +9,11 @@ by itself.
 The only integration point is the versioned HTTP API documented in
 [API.md](API.md):
 
-`camera -> OpenCV -> YOLOv8 -> annotated MJPEG + JSON status API`
+`camera -> OpenCV -> YOLOv8 -> annotated MJPEG + authenticated incident evidence`
 
-Stage 1 detects only COCO class `39` (`bottle`). Detections are visual and do
-not create incidents or alerts yet.
+Stage 1 detects only COCO class `39` (`bottle`). When the central backend is
+configured, confirmed detections create real in-memory incidents, linked
+notifications, and three annotated evidence images.
 
 ## Requirements
 
@@ -74,6 +75,9 @@ Edit `.env` after installation:
 - `ISMP_YOLO_MODEL` selects the current or future custom `.pt` model.
 - `ISMP_YOLO_CLASSES` is a comma-separated list of model class IDs.
 - `ISMP_ALLOWED_ORIGINS` contains the website origins allowed to read status.
+- Incident defaults require 3 positive frames in 2 seconds, capture evidence at
+  0, 1, and 2 seconds, rearm after 3 seconds without the target, and enforce a
+  30-second minimum cooldown. All values are configurable in `.env`.
 
 ### Optional central registration and heartbeat
 
@@ -88,7 +92,9 @@ ISMP_HEARTBEAT_SECONDS=10
 ```
 
 On first connection the service generates a stable `cameraId`, receives a
-per-camera token, and stores both in ignored `.device.json`. Do not copy or
+per-camera token, and stores both in ignored `.device.json`. The same token
+authenticates heartbeat and incident evidence. Evidence delivery uses a bounded
+retry queue and never blocks camera capture or local streaming. Do not copy or
 commit `.env` or `.device.json`.
 
 ## Website independence

@@ -10,7 +10,7 @@ documented APIs rather than source-code imports.
 | Central API and data | `backend/**` | backend tests plus the frontend build |
 
 The edge/frontend boundary is documented in `detector/API.md` and the central
-camera control plane in `backend/CAMERA_API.md`. Frontend work
+camera, incident, and evidence control plane in `backend/CAMERA_API.md`. Frontend work
 must not import Python files, and edge work must not import website files.
 
 ## Branches

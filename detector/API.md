@@ -32,6 +32,7 @@ Live status contains these stable top-level fields:
 - `detector`: model, state, target classes, confidence, and inference timing;
 - `stream`: stream state, client count, sequence, and JPEG quality;
 - `detections`: current frame detections;
+- `incidentDetection`: confirmation/rearm state and evidence progress;
 - `heartbeatAt`: server time in ISO 8601 format.
 
 Each detection contains `classId`, `label`, `confidence`, and an `xyxy` `box`.
@@ -72,7 +73,9 @@ includes a safe `central` object. Device secrets are never exposed by local
 status endpoints.
 
 When `ISMP_EDGE_ENROLLMENT_SECRET` is configured, the edge service registers
-outbound with the central Node.js API and sends an authenticated heartbeat at
-the configured interval. This control-plane contract is documented in
-`backend/CAMERA_API.md` in the complete repository. Camera streaming remains
-available locally when the central backend is unavailable.
+outbound with the central Node.js API, sends authenticated heartbeats, and
+delivers confirmed incident evidence. `central.incidentDelivery` exposes only
+safe queue counts and the latest delivery state; device secrets are never
+returned. The control-plane contract is documented in `backend/CAMERA_API.md`
+in the complete repository. Camera streaming remains available locally when
+the central backend is unavailable.

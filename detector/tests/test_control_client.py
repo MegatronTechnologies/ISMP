@@ -1,3 +1,4 @@
+import base64
 import json
 import sys
 import tempfile
@@ -56,6 +57,16 @@ class RecoveringControlClient(FakeControlClient):
             self.reject_first_heartbeat = False
             raise EdgeApiError("backend forgot the demo token", 401)
         return super()._post_json(path, payload, headers)
+
+
+class EvidenceControlClient(FakeControlClient):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.evidence_calls = []
+
+    def _post_jpeg(self, path, jpeg, headers):
+        self.evidence_calls.append((path, jpeg, headers))
+        return {"accepted": True}
 
 
 class ControlClientTests(unittest.TestCase):
@@ -156,6 +167,49 @@ class ControlClientTests(unittest.TestCase):
                 "/edge/cameras/cam-test-1/heartbeat",
             ])
             self.assertEqual(client.status()["state"], "ONLINE")
+
+    def test_detection_evidence_uses_device_token_and_encoded_metadata(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            identity_file = Path(temp_dir) / ".device.json"
+            identity_file.write_text(
+                json.dumps({"cameraId": "cam-test-1", "deviceToken": "saved-token"}),
+                encoding="utf-8",
+            )
+            client = EvidenceControlClient(
+                self.make_settings(identity_file),
+                edge_status,
+                edge_version="0.3.0",
+            )
+            evidence = {
+                "eventId": "event-test-1",
+                "captureId": "capture-test-1",
+                "capturedAt": "2026-08-21T12:00:00+00:00",
+                "detection": {
+                    "classId": 39,
+                    "label": "bottle",
+                    "confidence": 0.94,
+                    "box": [10, 20, 110, 220],
+                },
+                "jpeg": b"jpeg-bytes",
+            }
+
+            client._deliver_detection_evidence(evidence)
+
+            self.assertEqual(len(client.evidence_calls), 1)
+            path, jpeg, headers = client.evidence_calls[0]
+            self.assertEqual(
+                path,
+                "/edge/cameras/cam-test-1/detection-events/event-test-1/evidence",
+            )
+            self.assertEqual(jpeg, b"jpeg-bytes")
+            self.assertEqual(headers["Authorization"], "Bearer saved-token")
+            self.assertEqual(headers["X-ISMP-Detection-Present"], "true")
+            padded_label = headers["X-ISMP-Detection-Label-B64"] + "=="
+            self.assertEqual(
+                base64.urlsafe_b64decode(padded_label).decode("utf-8"),
+                "bottle",
+            )
+            self.assertEqual(client.status()["incidentDelivery"]["pendingEvidence"], 0)
 
 
 if __name__ == "__main__":
