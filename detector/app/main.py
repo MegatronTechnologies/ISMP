@@ -10,18 +10,22 @@ from pydantic import BaseModel, field_validator
 
 from . import __version__
 from .config import settings
+from .control_client import EdgeControlClient
 from .stream_service import CameraStreamService
 from .yolo_detector import YoloDetector
 
 
 detector = YoloDetector(settings)
 stream_service = CameraStreamService(settings, detector)
+control_client = EdgeControlClient(settings, stream_service.status, edge_version=__version__)
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     stream_service.start()
+    control_client.start()
     yield
+    control_client.stop()
     stream_service.stop()
 
 
@@ -53,6 +57,7 @@ class CameraSelection(BaseModel):
 @app.get("/api/v1/health")
 def health() -> dict:
     status = stream_service.status()
+    central_status = control_client.status()
     return {
         "ok": status["service"]["state"] == "ONLINE",
         "ready": (
@@ -62,12 +67,15 @@ def health() -> dict:
         "version": __version__,
         "camera": status["camera"]["state"],
         "detector": status["detector"]["state"],
+        "central": central_status["state"],
     }
 
 
 @app.get("/api/v1/status")
 def status() -> dict:
-    return stream_service.status()
+    current_status = stream_service.status()
+    current_status["central"] = control_client.status()
+    return current_status
 
 
 @app.get("/api/v1/stream.mjpg")

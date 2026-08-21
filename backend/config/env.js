@@ -17,7 +17,12 @@ if (isDemoMode && !jwtSecret) {
 module.exports = {
   isDemoMode,
   jwtSecret,
-  port: 3000,
+  port: Number.parseInt(process.env.PORT || '3000', 10),
+  edge: {
+    enrollmentSecret: process.env.EDGE_ENROLLMENT_SECRET || '',
+    cameraOfflineAfterSeconds: Number.parseInt(process.env.CAMERA_OFFLINE_AFTER_SECONDS || '30', 10),
+    demoOrganizationId: process.env.DEMO_ORGANIZATION_ID || '1',
+  },
   mysql: {
     host: process.env.MYSQL_HOST,
     user: process.env.MYSQL_USER,

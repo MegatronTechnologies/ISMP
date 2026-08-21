@@ -1,4 +1,6 @@
 .env
+.device.json
+.device.json.tmp
 .venv/
 Ultralytics/
 .matplotlib/

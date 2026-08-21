@@ -75,6 +75,22 @@ Edit `.env` after installation:
 - `ISMP_YOLO_CLASSES` is a comma-separated list of model class IDs.
 - `ISMP_ALLOWED_ORIGINS` contains the website origins allowed to read status.
 
+### Optional central registration and heartbeat
+
+The local stream works without the central backend. To publish camera health to
+the central API, put the same random enrollment secret in the backend `.env`
+and this folder's `.env`:
+
+```env
+ISMP_CENTRAL_API_URL=http://127.0.0.1:3000/api/v1
+ISMP_EDGE_ENROLLMENT_SECRET=<same value as backend EDGE_ENROLLMENT_SECRET>
+ISMP_HEARTBEAT_SECONDS=10
+```
+
+On first connection the service generates a stable `cameraId`, receives a
+per-camera token, and stores both in ignored `.device.json`. Do not copy or
+commit `.env` or `.device.json`.
+
 ## Website independence
 
 The website consumes the API; this service never imports the website and the

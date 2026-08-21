@@ -66,6 +66,7 @@ in [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Role-Based Access Control:** Frontend routes are protected by `ProtectedRoute` and `RoleGuard` components, simulating USER, ORGANIZATION_ADMIN, and SUPERADMIN access levels.
 - **Advanced Dashboard:** Accurate 24h event calculations and dynamic response times based on incident historical timestamps.
 - **Real Edge Stream MVP:** A standalone Windows camera service publishes YOLOv8-annotated MJPEG, health, status, and detection telemetry to Live Monitoring. Stage 1 targets bottles only and does not create incidents.
+- **Camera Control Plane:** Edge cameras securely enroll for per-device tokens and send authenticated health heartbeats to the central Node.js backend.
 
 **Future Features (Not Yet Implemented):**
 - **Custom Weapon Model:** Replace the temporary bottle-only YOLOv8 model with the trained weapon model.
