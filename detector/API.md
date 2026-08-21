@@ -6,6 +6,9 @@ version change; existing fields and meanings must remain compatible.
 
 Default base URL for the local demo: `http://127.0.0.1:8001`.
 
+The default incident evidence cadence is one annotated JPEG every 5 seconds;
+the interval is configurable through `ISMP_INCIDENT_SNAPSHOT_INTERVAL_SECONDS`.
+
 ## `GET /api/v1/health`
 
 Lightweight readiness response:
@@ -14,7 +17,7 @@ Lightweight readiness response:
 {
   "ok": true,
   "ready": true,
-  "version": "0.4.0",
+  "version": "0.4.1",
   "camera": "ONLINE",
   "detector": "READY"
 }

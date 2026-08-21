@@ -89,7 +89,7 @@ class Settings:
         os.getenv("ISMP_INCIDENT_SNAPSHOT_OFFSETS_SECONDS", "0,1,2")
     )
     incident_snapshot_interval_seconds: float = float(
-        os.getenv("ISMP_INCIDENT_SNAPSHOT_INTERVAL_SECONDS", "1")
+        os.getenv("ISMP_INCIDENT_SNAPSHOT_INTERVAL_SECONDS", "5")
     )
     incident_max_snapshots: int = int(os.getenv("ISMP_INCIDENT_MAX_SNAPSHOTS", "60"))
     incident_video_fps: float = float(os.getenv("ISMP_INCIDENT_VIDEO_FPS", "10"))

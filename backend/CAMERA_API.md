@@ -87,7 +87,7 @@ retries do not duplicate incidents, notifications, or images. The backend caps
 one incident at 120 evidence files as a bounded in-memory abuse guard.
 
 The edge defaults confirm 3 positive frames inside 2 seconds, collect one
-annotated frame every second, rearm after 3 continuous seconds without the
+annotated frame every 5 seconds, rearm after 3 continuous seconds without the
 target, and enforce a 30-second minimum cooldown. These values belong to the
 edge `.env`, not the website.
 
